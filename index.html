@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy"
+      content="default-src 'self';
+               script-src 'self' 'unsafe-inline' 'unsafe-eval';
+               style-src 'self' 'unsafe-inline';
+               connect-src 'self' https://api.elevenlabs.io https://api-free.deepl.com https://generativelanguage.googleapis.com https://meetlens-backend-5ptfw.ondigitalocean.app wss://meetlens-backend-5ptfw.ondigitalocean.app ws://localhost:8000 http://localhost:8000;
+               img-src 'self' data:;" />
+    <title>MeetLens - Meeting Transcription</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
