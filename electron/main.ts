@@ -1,9 +1,15 @@
-import { app, BrowserWindow, ipcMain, desktopCapturer } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  desktopCapturer,
+  ipcMain,
+  type IpcMainInvokeEvent,
+} from 'electron';
 import path from 'path';
 import Database from 'better-sqlite3';
 
 let mainWindow: BrowserWindow | null = null;
-let db: Database.Database | undefined;
+let db: Database | undefined;
 
 export function createDatabase() {
   const dbPath = path.join(app.getPath('userData'), 'meetlens.db');
@@ -81,7 +87,7 @@ export function createWindow() {
   return mainWindow;
 }
 
-export function registerIpcHandlers(database: Database.Database) {
+export function registerIpcHandlers(database: Database) {
   ipcMain.handle('get-audio-sources', async () => {
     try {
       const sources = await desktopCapturer.getSources({
@@ -97,7 +103,7 @@ export function registerIpcHandlers(database: Database.Database) {
     }
   });
 
-  ipcMain.handle('create-meeting', async (event, name: string) => {
+  ipcMain.handle('create-meeting', async (_event: IpcMainInvokeEvent, name: string) => {
     const now = new Date().toISOString();
     const stmt = database.prepare(
       'INSERT INTO meetings (name, created_at, updated_at) VALUES (?, ?, ?)'
@@ -111,12 +117,18 @@ export function registerIpcHandlers(database: Database.Database) {
     return stmt.all();
   });
 
-  ipcMain.handle('get-meeting', async (event, id: number) => {
+  ipcMain.handle('get-meeting', async (_event: IpcMainInvokeEvent, id: number) => {
     const stmt = database.prepare('SELECT * FROM meetings WHERE id = ?');
     return stmt.get(id);
   });
 
-  ipcMain.handle('save-transcript', async (event, meetingId: number, timestamp: string, text: string, translation?: string) => {
+  ipcMain.handle('save-transcript', async (
+    _event: IpcMainInvokeEvent,
+    meetingId: number,
+    timestamp: string,
+    text: string,
+    translation?: string,
+  ) => {
     const stmt = database.prepare(
       'INSERT INTO transcripts (meeting_id, timestamp, text, translation) VALUES (?, ?, ?, ?)'
     );
@@ -128,12 +140,12 @@ export function registerIpcHandlers(database: Database.Database) {
     return { id: result.lastInsertRowid };
   });
 
-  ipcMain.handle('get-transcripts', async (event, meetingId: number) => {
+  ipcMain.handle('get-transcripts', async (_event: IpcMainInvokeEvent, meetingId: number) => {
     const stmt = database.prepare('SELECT * FROM transcripts WHERE meeting_id = ? ORDER BY id ASC');
     return stmt.all(meetingId);
   });
 
-  ipcMain.handle('clear-transcripts', async (event, meetingId: number) => {
+  ipcMain.handle('clear-transcripts', async (_event: IpcMainInvokeEvent, meetingId: number) => {
     const stmt = database.prepare('DELETE FROM transcripts WHERE meeting_id = ?');
     stmt.run(meetingId);
 
@@ -143,25 +155,32 @@ export function registerIpcHandlers(database: Database.Database) {
     return { success: true };
   });
 
-  ipcMain.handle('delete-meeting', async (event, id: number) => {
+  ipcMain.handle('delete-meeting', async (_event: IpcMainInvokeEvent, id: number) => {
     const stmt = database.prepare('DELETE FROM meetings WHERE id = ?');
     stmt.run(id);
     return { success: true };
   });
 
-  ipcMain.handle('save-meeting-summary', async (event, meetingId: number, summary: string, fullTranscript: string) => {
+  ipcMain.handle(
+    'save-meeting-summary',
+    async (
+      _event: IpcMainInvokeEvent,
+      meetingId: number,
+      summary: string,
+      fullTranscript: string,
+    ) => {
     const stmt = database.prepare('UPDATE meetings SET summary = ?, full_transcript = ?, updated_at = ? WHERE id = ?');
     stmt.run(summary, fullTranscript, new Date().toISOString(), meetingId);
     return { success: true };
   });
 
-  ipcMain.handle('get-meeting-summary', async (event, meetingId: number) => {
+  ipcMain.handle('get-meeting-summary', async (_event: IpcMainInvokeEvent, meetingId: number) => {
     const stmt = database.prepare('SELECT summary, full_transcript FROM meetings WHERE id = ?');
     const result = stmt.get(meetingId);
     return result || { summary: null, full_transcript: null };
   });
 
-  ipcMain.handle('translate-text', async (event, text: string, targetLang: string, apiKey: string) => {
+  ipcMain.handle('translate-text', async (_event: IpcMainInvokeEvent, text: string, targetLang: string, apiKey: string) => {
     try {
       const url = 'https://api-free.deepl.com/v2/translate';
 

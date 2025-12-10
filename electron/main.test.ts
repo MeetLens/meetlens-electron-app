@@ -1,4 +1,5 @@
 import path from 'path';
+import type { BrowserWindowConstructorOptions } from 'electron';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Use vi.hoisted so the mocks exist before vi.mock is hoisted
@@ -24,7 +25,7 @@ const electronMocks = vi.hoisted(() => {
   };
 
   mocks.browserWindowInstance = browserWindowInstance;
-  mocks.BrowserWindowMock = vi.fn((options) => {
+  mocks.BrowserWindowMock = vi.fn((options: BrowserWindowConstructorOptions) => {
     mocks.lastBrowserWindowOptions = options;
     return browserWindowInstance as any;
   });
@@ -133,7 +134,10 @@ describe('electron main process helpers', () => {
       'translate-text',
     ];
 
-    expect(electronMocks.ipcMainMock.handle.mock.calls.map((call) => call[0])).toEqual(expectedChannels);
+    const handleCalls = electronMocks.ipcMainMock.handle.mock
+      .calls as [string, ...unknown[]][];
+
+    expect(handleCalls.map(([channel]) => channel)).toEqual(expectedChannels);
     expectedChannels.forEach((channel) => {
       expect(electronMocks.ipcMainMock.handle).toHaveBeenCalledWith(channel, expect.any(Function));
     });
