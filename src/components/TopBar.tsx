@@ -122,10 +122,14 @@ function TopBar({
             <h2 style={{ marginBottom: '24px', fontSize: '18px', fontWeight: 600, color: '#ececec' }}>API Settings</h2>
 
             <div style={{ marginBottom: '18px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: '#d4d4d4' }}>
+              <label
+                htmlFor="elevenLabsKey"
+                style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: '#d4d4d4' }}
+              >
                 ElevenLabs API Key
               </label>
               <input
+                id="elevenLabsKey"
                 type="password"
                 className="api-key-input"
                 value={elevenLabsKey}
@@ -138,10 +142,14 @@ function TopBar({
             </div>
 
             <div style={{ marginBottom: '18px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: '#d4d4d4' }}>
+              <label
+                htmlFor="deeplKey"
+                style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: '#d4d4d4' }}
+              >
                 DeepL API Key
               </label>
               <input
+                id="deeplKey"
                 type="password"
                 className="api-key-input"
                 value={deeplKey}
@@ -154,10 +162,14 @@ function TopBar({
             </div>
 
             <div style={{ marginBottom: '22px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: '#d4d4d4' }}>
+              <label
+                htmlFor="geminiKey"
+                style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: '#d4d4d4' }}
+              >
                 Google Gemini API Key
               </label>
               <input
+                id="geminiKey"
                 type="password"
                 className="api-key-input"
                 value={geminiKey}
@@ -170,10 +182,14 @@ function TopBar({
             </div>
 
             <div style={{ marginBottom: '22px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: '#d4d4d4' }}>
+              <label
+                htmlFor="translationLanguage"
+                style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: '#d4d4d4' }}
+              >
                 Translation Language
               </label>
               <select
+                id="translationLanguage"
                 className="api-key-input"
                 value={selectedLanguage}
                 onChange={(e) => onLanguageChange(e.target.value)}
