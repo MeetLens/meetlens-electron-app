@@ -27,8 +27,15 @@ export interface TranscriptStableMessage {
   text: string;
 }
 
-export interface TranslationMessage {
-  type: 'translation';
+export interface TranslationPartialMessage {
+  type: 'translation_partial';
+  session_id: string;
+  chunk_id: number;
+  text: string;
+}
+
+export interface TranslationStableMessage {
+  type: 'translation_stable';
   session_id: string;
   text: string;
 }
@@ -43,7 +50,8 @@ export interface ErrorMessage {
 type ServerMessage =
   | TranscriptPartialMessage
   | TranscriptStableMessage
-  | TranslationMessage
+  | TranslationPartialMessage
+  | TranslationStableMessage
   | ErrorMessage;
 
 const BACKEND_AUDIO_FORMAT = 'pcm_s16le_16k_mono';
@@ -59,7 +67,8 @@ export class BackendTranscriptionService {
 
   // Callbacks
   private onTranscriptCallback: ((text: string) => void) | null = null;
-  private onTranslationCallback: ((text: string) => void) | null = null;
+  private onTranslationPartialCallback: ((text: string) => void) | null = null;
+  private onTranslationStableCallback: ((text: string) => void) | null = null;
   private onErrorCallback: ((error: string) => void) | null = null;
   private onConnectionCallback: ((connected: boolean) => void) | null = null;
 
@@ -73,14 +82,16 @@ export class BackendTranscriptionService {
    */
   async connect(
     onTranscript: (text: string) => void,
-    onTranslation: (text: string) => void,
+    onTranslationPartial: (text: string) => void,
+    onTranslationStable: (text: string) => void,
     onConnection: (connected: boolean) => void,
     onError: (error: string) => void
   ): Promise<boolean> {
     return new Promise((resolve, reject) => {
       try {
         this.onTranscriptCallback = onTranscript;
-        this.onTranslationCallback = onTranslation;
+        this.onTranslationPartialCallback = onTranslationPartial;
+        this.onTranslationStableCallback = onTranslationStable;
         this.onConnectionCallback = onConnection;
         this.onErrorCallback = onError;
 
@@ -153,13 +164,23 @@ export class BackendTranscriptionService {
         }
         break;
 
-      case 'translation':
-        // Translation received - send to UI
-        console.log('🌐 Translation:', message.text);
-        if (this.onTranslationCallback && message.text && message.text.trim()) {
-          this.onTranslationCallback(message.text);
+      case 'translation_partial':
+        // Unstable translation preview - replace current partial
+        console.log('🌐 Translation partial:', message.text);
+        if (this.onTranslationPartialCallback && message.text && message.text.trim()) {
+          this.onTranslationPartialCallback(message.text);
         } else {
-          console.warn('⚠️ No translation callback or empty text');
+          console.warn('⚠️ No translation partial callback or empty text');
+        }
+        break;
+
+      case 'translation_stable':
+        // Stable translation segment - append to history
+        console.log('🌐 Translation stable:', message.text);
+        if (this.onTranslationStableCallback && message.text && message.text.trim()) {
+          this.onTranslationStableCallback(message.text);
+        } else {
+          console.warn('⚠️ No translation stable callback or empty text');
         }
         break;
 
