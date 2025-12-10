@@ -71,6 +71,18 @@ input, select, textarea {
   height: 60px;
 }
 
+.is-mac .top-bar {
+  -webkit-app-region: drag;
+  padding-left: 72px;
+}
+
+.is-mac .top-bar .app-logo,
+.is-mac .top-bar button,
+.is-mac .top-bar .connection-status {
+  -webkit-app-region: no-drag;
+  margin-left: 16px;
+}
+
 .top-bar-left {
   display: flex;
   align-items: center;

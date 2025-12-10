@@ -58,6 +58,8 @@ export function createDatabase() {
 }
 
 export function createWindow() {
+  const isMac = process.platform === 'darwin';
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -69,6 +71,12 @@ export function createWindow() {
       contextIsolation: true,
     },
     autoHideMenuBar: true,
+    ...(isMac
+      ? {
+          titleBarStyle: 'hiddenInset',
+          trafficLightPosition: { x: 16, y: 20 },
+        }
+      : {}),
   });
 
   const isDev = !app.isPackaged;
