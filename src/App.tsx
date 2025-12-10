@@ -2,16 +2,16 @@ import { useState, useEffect, useRef } from 'react';
 import { Meeting, Transcript } from './types/electron';
 import { AudioCaptureService } from './services/audioService';
 import { TranslationService } from './services/translationService';
-import { BackendSummaryService, SummaryResponse } from './services/backendSummaryService';
+import { BackendSummaryService } from './services/backendSummaryService';
 import { BackendTranscriptionService } from './services/backendTranscriptionService';
 import TopBar from './components/TopBar';
 import Sidebar from './components/Sidebar';
-import SummaryPanel from './components/SummaryPanel';
 
 interface TranscriptEntry {
   timestamp: string;
   text: string;
   translation?: string;
+  sessionId?: string | null;
 }
 
 function App() {
@@ -25,7 +25,6 @@ function App() {
   const [deeplApiKey, setDeeplApiKey] = useState('');
   const [geminiApiKey, setGeminiApiKey] = useState('');
   const [meetingSummary, setMeetingSummary] = useState('');
-  const [structuredSummary, setStructuredSummary] = useState<SummaryResponse | null>(null);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
 
@@ -125,7 +124,6 @@ function App() {
     setCurrentMeeting(meeting);
     setTranscripts([]);
     setMeetingSummary('');
-    setStructuredSummary(null);
   };
 
   const selectMeeting = (meeting: Meeting) => {
@@ -142,7 +140,6 @@ function App() {
       setCurrentMeeting(updatedMeetings.length > 0 ? updatedMeetings[0] : null);
       setTranscripts([]);
       setMeetingSummary('');
-      setStructuredSummary(null);
     }
   };
 
@@ -152,7 +149,6 @@ function App() {
     await window.electronAPI.clearTranscripts(currentMeeting.id);
     setTranscripts([]);
     setMeetingSummary('');
-    setStructuredSummary(null);
   };
 
   const formatTimestamp = (): string => {
@@ -205,7 +201,7 @@ function App() {
 
     setTranscripts((prev) => {
       // Find the bubble for this session by sessionId
-      const existingBubbleIndex = prev.findIndex((entry: any) => entry.sessionId === sessionId);
+      const existingBubbleIndex = prev.findIndex((entry) => entry.sessionId === sessionId);
 
       if (existingBubbleIndex !== -1) {
         // Same recording session: REPLACE text (backend sends cumulative)
@@ -214,7 +210,7 @@ function App() {
         updated[existingBubbleIndex] = {
           ...updated[existingBubbleIndex],
           text: cleanedText, // REPLACE with latest cumulative text
-          translation: translation || updated[existingBubbleIndex].translation
+          translation: translation || updated[existingBubbleIndex].translation,
         };
         return updated;
       } else if (isRecording && prev.length > 0) {
@@ -233,17 +229,12 @@ function App() {
       } else {
         // New recording session: CREATE new Audio Bubble
         console.log('📝 Creating new Audio Bubble for session:', sessionId);
-        return [...prev, { timestamp, text: cleanedText, translation, sessionId } as any];
+        return [...prev, { timestamp, text: cleanedText, translation, sessionId }];
       }
     });
 
     // Note: We don't save each partial transcript here anymore
     // The final combined text will be saved at stopRecording
-  };
-
-  const handleTranscript = async (text: string) => {
-    if (!currentMeeting) return;
-    await handleTranscriptWithMeeting(text, currentMeeting);
   };
 
   const handleTranslationWithMeeting = async (translation: string, meeting: Meeting) => {
@@ -307,8 +298,6 @@ function App() {
       );
 
       // Store structured summary
-      setStructuredSummary(summaryResponse);
-
       // Format for display and backward compatibility
       const formattedSummary = backendSummaryServiceRef.current.formatSummaryForDisplay(summaryResponse);
       setMeetingSummary(formattedSummary);
@@ -335,7 +324,6 @@ function App() {
       setCurrentMeeting(activeMeeting);
       setTranscripts([]);
       setMeetingSummary('');
-      setStructuredSummary(null);
     }
 
     // Generate a new session ID for this recording session
@@ -374,7 +362,7 @@ function App() {
 
       // Start audio capture
       const started = await audioServiceRef.current.startCapture(
-        (audioBlob) => {
+        (_audioBlob) => {
           // Audio data is handled by MediaRecorder in the transcription service
         },
         (error) => {
@@ -410,7 +398,7 @@ function App() {
     // Save the current session's transcript to database BEFORE stopping
     if (currentMeeting && sessionId) {
       // Find the bubble for this session
-      const sessionBubble = transcripts.find((t: any) => t.sessionId === sessionId);
+      const sessionBubble = transcripts.find((t) => t.sessionId === sessionId);
       if (sessionBubble && sessionBubble.text) {
         console.log('💾 Saving session transcript to database:', sessionBubble.text.substring(0, 50) + '...');
         await window.electronAPI.saveTranscript(

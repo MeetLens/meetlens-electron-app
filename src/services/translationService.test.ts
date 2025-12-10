@@ -3,14 +3,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TranslationService } from './translationService';
 
-declare global {
-  interface Window {
-    electronAPI: {
-      translateText: (text: string, targetLanguage: string, apiKey: string) => Promise<string>;
-    };
-  }
-}
-
 describe('TranslationService', () => {
   let mockTranslateText: ReturnType<typeof vi.fn>;
 
@@ -20,7 +12,7 @@ describe('TranslationService', () => {
       electronAPI: {
         translateText: mockTranslateText,
       },
-    } as Window & typeof globalThis);
+    } as unknown as Window & typeof globalThis);
   });
 
   it('translates text using electron API', async () => {

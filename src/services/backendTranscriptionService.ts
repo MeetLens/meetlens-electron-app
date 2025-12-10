@@ -53,7 +53,6 @@ export class BackendTranscriptionService {
   private chunkIdCounter = 0;
   private mediaRecorder: MediaRecorder | null = null;
   private audioContext: AudioContext | null = null;
-  private audioWorkletNode: AudioWorkletNode | null = null;
   private isRecording = false;
 
   // Callbacks
@@ -244,7 +243,7 @@ export class BackendTranscriptionService {
   /**
    * Convert ArrayBuffer to base64 string
    */
-  private arrayBufferToBase64(buffer: ArrayBuffer): string {
+  private arrayBufferToBase64(buffer: ArrayBufferLike): string {
     const bytes = new Uint8Array(buffer);
     let binary = '';
     for (let i = 0; i < bytes.byteLength; i++) {
