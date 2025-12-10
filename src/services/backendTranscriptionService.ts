@@ -1,3 +1,5 @@
+import { AUDIO_SAMPLE_RATE, TRANSCRIPTION_WS_URL } from '../config';
+
 // Backend WebSocket service for real-time transcription and translation
 export interface AudioChunkMessage {
   type: 'audio_chunk';
@@ -60,7 +62,7 @@ export class BackendTranscriptionService {
   private onErrorCallback: ((error: string) => void) | null = null;
   private onConnectionCallback: ((connected: boolean) => void) | null = null;
 
-  constructor(sessionId: string, wsUrl: string = 'wss://meetlens-backend-5ptfw.ondigitalocean.app/ws/transcribe') {
+  constructor(sessionId: string, wsUrl: string = TRANSCRIPTION_WS_URL) {
     this.sessionId = sessionId;
     this.wsUrl = wsUrl;
   }
@@ -178,7 +180,7 @@ export class BackendTranscriptionService {
   async setupMediaRecorder(stream: MediaStream) {
     try {
       // Create AudioContext with 16kHz sample rate (required by backend)
-      this.audioContext = new AudioContext({ sampleRate: 16000 });
+      this.audioContext = new AudioContext({ sampleRate: AUDIO_SAMPLE_RATE });
       const source = this.audioContext.createMediaStreamSource(stream);
 
       // Create ScriptProcessorNode for audio processing
