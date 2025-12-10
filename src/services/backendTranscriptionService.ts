@@ -46,13 +46,15 @@ type ServerMessage =
   | TranslationMessage
   | ErrorMessage;
 
+const BACKEND_AUDIO_FORMAT = 'pcm_s16le_16k_mono';
+
 export class BackendTranscriptionService {
   private ws: WebSocket | null = null;
   private sessionId: string;
   private wsUrl: string;
   private chunkIdCounter = 0;
-  private mediaRecorder: MediaRecorder | null = null;
   private audioContext: AudioContext | null = null;
+  private workletNode: AudioWorkletNode | null = null;
   private isRecording = false;
 
   // Callbacks
@@ -178,66 +180,103 @@ export class BackendTranscriptionService {
    */
   async setupMediaRecorder(stream: MediaStream) {
     try {
-      // Create AudioContext with 16kHz sample rate (required by backend)
-      this.audioContext = new AudioContext({ sampleRate: AUDIO_SAMPLE_RATE });
+      // Use default device sample rate; resample in JS to 16 kHz before sending
+      this.audioContext = new AudioContext();
+      console.log('[BackendTranscription] AudioContext created with state:', this.audioContext.state);
       const source = this.audioContext.createMediaStreamSource(stream);
-
-      // Create ScriptProcessorNode for audio processing
-      // Using 4096 buffer size for ~250ms chunks at 16kHz
-      const processor = this.audioContext.createScriptProcessor(4096, 1, 1);
-
-      processor.onaudioprocess = (event) => {
-        if (this.ws?.readyState === WebSocket.OPEN) {
-          try {
-            // Get audio data from channel 0 (mono)
-            const audioData = event.inputBuffer.getChannelData(0);
-
-            // Convert Float32Array to Int16Array (PCM S16LE)
-            const pcmData = this.floatTo16BitPCM(audioData);
-
-            // Convert to base64
-            const base64 = this.arrayBufferToBase64(pcmData.buffer);
-
-            // Send audio chunk to backend
-            const message: AudioChunkMessage = {
-              type: 'audio_chunk',
-              session_id: this.sessionId,
-              chunk_id: this.chunkIdCounter++,
-              data: base64,
-              audio_format: 'pcm_s16le_16k_mono',
-            };
-
-            this.ws.send(JSON.stringify(message));
-          } catch (error) {
-            console.error('Error sending audio chunk:', error);
-          }
+      const incomingTrack = stream.getAudioTracks()[0];
+      if (incomingTrack) {
+        console.log('[BackendTranscription] Incoming track settings:', incomingTrack.getSettings());
+      }
+      console.log(
+        '[BackendTranscription] AudioContext sampleRate:',
+        this.audioContext.sampleRate
+      );
+      console.log('[BackendTranscription] Declared backend audio_format:', BACKEND_AUDIO_FORMAT);
+      // Mark recording early so we can attempt resumes on state change
+      this.isRecording = true;
+      this.audioContext.onstatechange = () => {
+        const state = this.audioContext?.state;
+        console.log('[BackendTranscription] AudioContext state changed:', state);
+        if (state === 'suspended' && this.isRecording && this.audioContext) {
+          this.audioContext
+            .resume()
+            .then(() => console.log('[BackendTranscription] AudioContext resumed after suspension'))
+            .catch((err) =>
+              console.warn('[BackendTranscription] Failed to resume AudioContext:', err)
+            );
         }
       };
 
-      // Connect the audio graph
-      source.connect(processor);
-      processor.connect(this.audioContext.destination);
+      // Load AudioWorklet for stable processing
+      await this.audioContext.audioWorklet.addModule(
+        new URL('../worklets/pcm-worklet.js', import.meta.url)
+      );
 
-      this.isRecording = true;
-      console.log('Audio processing started for backend WebSocket (PCM 16kHz mono)');
+      this.workletNode = new AudioWorkletNode(this.audioContext, 'pcm-worklet', {
+        numberOfInputs: 1,
+        numberOfOutputs: 1,
+        outputChannelCount: [1],
+        processorOptions: {
+          targetSampleRate: AUDIO_SAMPLE_RATE,
+          chunkLength: 4096,
+        },
+      });
+
+      this.workletNode.onprocessorerror = (err) => {
+        console.error('[BackendTranscription] AudioWorklet processor error:', err);
+      };
+
+      let processedChunks = 0;
+      this.workletNode.port.onmessage = (event) => {
+        const data = event.data;
+        if (!data || data.type !== 'chunk') {
+          return;
+        }
+        if (this.ws?.readyState !== WebSocket.OPEN) {
+          return;
+        }
+        try {
+          const base64 = this.arrayBufferToBase64(data.pcm);
+          const message: AudioChunkMessage = {
+            type: 'audio_chunk',
+            session_id: this.sessionId,
+            chunk_id: this.chunkIdCounter++,
+            data: base64,
+            audio_format: BACKEND_AUDIO_FORMAT,
+          };
+
+          this.ws.send(JSON.stringify(message));
+          processedChunks += 1;
+          if (processedChunks <= 3 || processedChunks % 50 === 0) {
+            console.log(
+              '[BackendTranscription] Sent chunk',
+              message.chunk_id,
+              'size:',
+              base64.length,
+              'ws state:',
+              this.ws.readyState,
+              'rms:',
+              (data.rms || 0).toFixed(4),
+              'peak:',
+              (data.peak || 0).toFixed(4)
+            );
+          }
+        } catch (error) {
+          console.error('Error sending audio chunk from worklet:', error);
+        }
+      };
+
+      // Connect the audio graph without routing to hardware output to avoid device errors
+      source.connect(this.workletNode);
+      const nullDestination = this.audioContext.createMediaStreamDestination();
+      this.workletNode.connect(nullDestination);
+
+      console.log('Audio processing started for backend WebSocket (PCM 16kHz mono, AudioWorklet)');
     } catch (error) {
       console.error('Failed to set up audio processing:', error);
       throw error;
     }
-  }
-
-  /**
-   * Convert Float32Array audio samples to 16-bit PCM
-   */
-  private floatTo16BitPCM(float32Array: Float32Array): Int16Array {
-    const int16Array = new Int16Array(float32Array.length);
-    for (let i = 0; i < float32Array.length; i++) {
-      // Clamp the value between -1 and 1
-      const s = Math.max(-1, Math.min(1, float32Array[i]));
-      // Convert to 16-bit integer
-      int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
-    }
-    return int16Array;
   }
 
   /**
@@ -259,14 +298,17 @@ export class BackendTranscriptionService {
     try {
       // Stop audio processing
       if (this.audioContext) {
+        if (this.workletNode) {
+          try {
+            this.workletNode.port.onmessage = null;
+            this.workletNode.disconnect();
+          } catch (err) {
+            console.warn('[BackendTranscription] Failed to disconnect worklet node:', err);
+          }
+          this.workletNode = null;
+        }
         await this.audioContext.close();
         this.audioContext = null;
-        this.isRecording = false;
-      }
-
-      // Stop MediaRecorder (fallback)
-      if (this.mediaRecorder && this.isRecording) {
-        this.mediaRecorder.stop();
         this.isRecording = false;
       }
 

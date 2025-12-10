@@ -1,6 +1,7 @@
 import {
   app,
   BrowserWindow,
+  session,
   desktopCapturer,
   ipcMain,
   type IpcMainInvokeEvent,
@@ -10,6 +11,9 @@ import Database from 'better-sqlite3';
 
 let mainWindow: BrowserWindow | null = null;
 let db: Database | undefined;
+
+// Enable macOS loopback audio for screen share
+app.commandLine.appendSwitch('enable-features', 'MacLoopbackAudioForScreenShare');
 
 export function createDatabase() {
   const dbPath = path.join(app.getPath('userData'), 'meetlens.db');
@@ -93,6 +97,36 @@ export function createWindow() {
   });
 
   return mainWindow;
+}
+
+function configureDisplayMediaHandling() {
+  // Auto-approve media/display capture to simplify UX
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    if (permission === 'media' || permission === 'display-capture') {
+      callback(true);
+    } else {
+      callback(false);
+    }
+  });
+
+  // Provide display media (screen + loopback audio) to renderer via getDisplayMedia
+  session.defaultSession.setDisplayMediaRequestHandler(async (_request, callback) => {
+    try {
+      const sources = await desktopCapturer.getSources({ types: ['screen', 'window'] });
+      // Prefer primary screen; fall back to first
+      const screenSource =
+        sources.find((source) => source.name === 'Entire Screen' || source.name === 'Screen 1') ||
+        sources[0];
+
+      callback({
+        video: screenSource,
+        audio: 'loopback',
+      });
+    } catch (error) {
+      console.error('Error handling display media request:', error);
+      callback({ video: undefined, audio: undefined });
+    }
+  });
 }
 
 export function registerIpcHandlers(database: Database) {
@@ -223,6 +257,7 @@ export function registerIpcHandlers(database: Database) {
 function bootstrap() {
   const database = createDatabase();
   registerIpcHandlers(database);
+  configureDisplayMediaHandling();
   createWindow();
 
   app.on('activate', () => {

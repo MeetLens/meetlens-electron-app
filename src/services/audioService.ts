@@ -22,7 +22,13 @@ export class AudioCaptureService {
   ): Promise<boolean> {
     try {
       // Use higher sample rate for better quality
-      this.audioContext = new AudioContext({ sampleRate: AUDIO_SAMPLE_RATE });
+      this.audioContext = new AudioContext();
+      console.log(
+        '[AudioCapture] AudioContext created with state:',
+        this.audioContext.state,
+        'sampleRate:',
+        this.audioContext.sampleRate
+      );
       this.activeApps = [];
 
       // Capture microphone
@@ -36,70 +42,16 @@ export class AudioCaptureService {
           },
         });
         console.log('✓ Microphone captured successfully');
+        const micTrack = this.micStream.getAudioTracks()[0];
+        if (micTrack) {
+          console.log('[AudioCapture] Microphone track settings:', micTrack.getSettings());
+        }
       } catch (err) {
         console.warn('Microphone access denied or not available:', err);
       }
 
       // Try to capture system audio using desktopCapturer
-      const sources = await window.electronAPI.getAudioSources();
-      console.log('Available audio sources:', sources.length);
-
-      if (sources.length > 0) {
-        // Use the first available source (usually "Entire Screen" or primary screen)
-        const primarySource = sources.find(s => s.name.includes('Entire Screen') || s.name.includes('Screen 1')) || sources[0];
-        console.log('Using audio source:', primarySource.name);
-
-        // Track active apps from sources
-        sources.forEach(source => {
-          if (!source.name.includes('Screen') && !source.name.includes('Entire')) {
-            this.activeApps.push({
-              name: source.name,
-              timestamp: new Date().toISOString()
-            });
-          }
-        });
-
-        const systemAudioConstraints: any = {
-          audio: {
-            mandatory: {
-              chromeMediaSource: 'desktop',
-              chromeMediaSourceId: primarySource.id,
-            },
-          },
-          video: {
-            mandatory: {
-              chromeMediaSource: 'desktop',
-              chromeMediaSourceId: primarySource.id,
-              maxWidth: 1,
-              maxHeight: 1,
-            },
-          },
-        };
-
-        try {
-          const systemStreamRaw = await navigator.mediaDevices.getUserMedia(
-            systemAudioConstraints as MediaStreamConstraints
-          );
-
-          // Extract only audio tracks
-          const audioTracks = systemStreamRaw.getAudioTracks();
-          console.log('Raw system stream audio tracks:', audioTracks.length);
-
-          if (audioTracks.length > 0) {
-            this.systemStream = new MediaStream(audioTracks);
-            console.log('✓ System audio captured successfully');
-          } else {
-            console.warn('No audio tracks in system stream - Windows may need virtual audio cable');
-          }
-
-          // Stop video tracks as we only need audio
-          systemStreamRaw.getVideoTracks().forEach(track => track.stop());
-        } catch (err) {
-          console.warn('System audio capture failed:', err);
-        }
-      } else {
-        console.warn('No desktop capture sources available');
-      }
+      await this.captureSystemAudio();
 
       this.destination = this.audioContext.createMediaStreamDestination();
 
@@ -128,10 +80,31 @@ export class AudioCaptureService {
       }
 
       console.log('Total audio tracks in mixed stream:', this.destination.stream.getAudioTracks().length);
+      const mixedTrack = this.destination.stream.getAudioTracks()[0];
+      if (mixedTrack) {
+        console.log('[AudioCapture] Mixed track settings:', mixedTrack.getSettings());
+      }
 
       this.mediaRecorder = new MediaRecorder(this.destination.stream, {
         mimeType: 'audio/webm;codecs=opus',
       });
+
+      console.log(
+        '[AudioCapture] Destination tracks:',
+        this.destination.stream.getAudioTracks().map((t) => t.label || t.id)
+      );
+
+      // Track state changes for debugging device issues
+      this.audioContext.onstatechange = () => {
+        const state = this.audioContext?.state;
+        console.log('[AudioCapture] AudioContext state changed:', state);
+        if (state === 'suspended' && this.isRecording && this.audioContext) {
+          this.audioContext
+            .resume()
+            .then(() => console.log('[AudioCapture] AudioContext resumed after suspension'))
+            .catch((err) => console.warn('[AudioCapture] Failed to resume AudioContext:', err));
+        }
+      };
 
       this.mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -163,6 +136,104 @@ export class AudioCaptureService {
       }
       this.cleanup();
       return false;
+    }
+  }
+
+  private async captureSystemAudio() {
+    // Prefer the official display media loopback path
+    try {
+      const displayStream = await navigator.mediaDevices.getDisplayMedia({
+        audio: true,
+        video: { width: 1, height: 1, frameRate: 1 },
+      });
+
+      const audioTracks = displayStream.getAudioTracks();
+      console.log('Display media stream audio tracks:', audioTracks.length);
+      if (audioTracks.length > 0) {
+        this.systemStream = new MediaStream(audioTracks);
+        console.log('✓ System audio captured via display media');
+        const systemTrack = audioTracks[0];
+        if (systemTrack) {
+          console.log('[AudioCapture] System track settings:', systemTrack.getSettings());
+        }
+      } else {
+        console.warn('Display media stream had no audio tracks, falling back to desktopCapturer');
+      }
+
+      // Stop the video track immediately; we only need audio
+      displayStream.getVideoTracks().forEach((track) => track.stop());
+      if (this.systemStream) {
+        return;
+      }
+    } catch (err) {
+      console.warn('Display media capture failed, falling back:', err);
+    }
+
+    // Fallback: legacy desktopCapturer path
+    const sources = await window.electronAPI.getAudioSources();
+    console.log('Available audio sources:', sources.length);
+
+    if (sources.length === 0) {
+      console.warn('No desktop capture sources available');
+      return;
+    }
+
+    const primarySource =
+      sources.find((s: any) => s.name.includes('Entire Screen') || s.name.includes('Screen 1')) ||
+      sources[0];
+    console.log('Using audio source:', primarySource.name);
+
+    // Track active apps from sources
+    sources.forEach((source: any) => {
+      if (!source.name.includes('Screen') && !source.name.includes('Entire')) {
+        this.activeApps.push({
+          name: source.name,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    });
+
+    const systemAudioConstraints: any = {
+      audio: {
+        mandatory: {
+          chromeMediaSource: 'desktop',
+          chromeMediaSourceId: primarySource.id,
+        },
+      },
+      video: {
+        mandatory: {
+          chromeMediaSource: 'desktop',
+          chromeMediaSourceId: primarySource.id,
+          maxWidth: 1,
+          maxHeight: 1,
+        },
+      },
+    };
+
+    try {
+      const systemStreamRaw = await navigator.mediaDevices.getUserMedia(
+        systemAudioConstraints as MediaStreamConstraints
+      );
+
+      // Extract only audio tracks
+      const audioTracks = systemStreamRaw.getAudioTracks();
+      console.log('Raw system stream audio tracks:', audioTracks.length);
+
+      if (audioTracks.length > 0) {
+        this.systemStream = new MediaStream(audioTracks);
+        console.log('✓ System audio captured successfully (fallback)');
+        const systemTrack = audioTracks[0];
+        if (systemTrack) {
+          console.log('[AudioCapture] System track settings:', systemTrack.getSettings());
+        }
+      } else {
+        console.warn('No audio tracks in system stream - Windows may need virtual audio cable');
+      }
+
+      // Stop video tracks as we only need audio
+      systemStreamRaw.getVideoTracks().forEach((track) => track.stop());
+    } catch (err) {
+      console.warn('System audio capture failed (fallback):', err);
     }
   }
 
