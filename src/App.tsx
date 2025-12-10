@@ -2,10 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { Meeting, Transcript } from './types/electron';
 import { AudioCaptureService } from './services/audioService';
 import { TranslationService } from './services/translationService';
-import { BackendSummaryService } from './services/backendSummaryService';
+import { BackendSummaryService, type SummaryResponse } from './services/backendSummaryService';
 import { BackendTranscriptionService } from './services/backendTranscriptionService';
 import TopBar from './components/TopBar';
 import Sidebar from './components/Sidebar';
+import SummaryPanel from './components/SummaryPanel';
 
 interface TranscriptEntry {
   timestamp: string;
@@ -25,8 +26,8 @@ function App() {
   const [deeplApiKey, setDeeplApiKey] = useState('');
   const [geminiApiKey, setGeminiApiKey] = useState('');
   const [meetingSummary, setMeetingSummary] = useState('');
+  const [structuredSummary, setStructuredSummary] = useState<SummaryResponse | null>(null);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
-  const [showSummary, setShowSummary] = useState(false);
   const [stableTranslation, setStableTranslation] = useState('');
   const [partialTranslation, setPartialTranslation] = useState('');
 
@@ -117,6 +118,7 @@ function App() {
   const loadMeetingSummary = async (meetingId: number) => {
     const result = await window.electronAPI.getMeetingSummary(meetingId);
     setMeetingSummary(result.summary || '');
+    setStructuredSummary(null);
   };
 
   const createNewMeeting = async () => {
@@ -128,6 +130,7 @@ function App() {
     setCurrentMeeting(meeting);
     setTranscripts([]);
     setMeetingSummary('');
+    setStructuredSummary(null);
   };
 
   const selectMeeting = (meeting: Meeting) => {
@@ -144,6 +147,7 @@ function App() {
       setCurrentMeeting(updatedMeetings.length > 0 ? updatedMeetings[0] : null);
       setTranscripts([]);
       setMeetingSummary('');
+      setStructuredSummary(null);
     }
   };
 
@@ -153,6 +157,7 @@ function App() {
     await window.electronAPI.clearTranscripts(currentMeeting.id);
     setTranscripts([]);
     setMeetingSummary('');
+    setStructuredSummary(null);
   };
 
   const formatTimestamp = (): string => {
@@ -337,7 +342,7 @@ function App() {
       // Format for display and backward compatibility
       const formattedSummary = backendSummaryServiceRef.current.formatSummaryForDisplay(summaryResponse);
       setMeetingSummary(formattedSummary);
-      setShowSummary(true);
+      setStructuredSummary(summaryResponse);
 
       // Save summary to database
       await window.electronAPI.saveMeetingSummary(currentMeeting.id, formattedSummary, fullTranscript);
@@ -536,45 +541,6 @@ function App() {
             </div>
           </div>
 
-          {showSummary && meetingSummary && (
-            <div style={{
-              padding: '16px 20px',
-              background: 'rgba(16, 163, 127, 0.1)',
-              borderBottom: '1px solid rgba(16, 163, 127, 0.2)',
-              position: 'relative'
-            }}>
-              <button
-                onClick={() => setShowSummary(false)}
-                style={{
-                  position: 'absolute',
-                  top: '12px',
-                  right: '12px',
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#8e8e8e',
-                  fontSize: '20px',
-                  cursor: 'pointer',
-                  padding: '4px 8px',
-                }}
-              >
-                ×
-              </button>
-              <h3 style={{ fontSize: '13px', color: '#10a37f', marginBottom: '10px', fontWeight: 600 }}>
-                AI Summary
-              </h3>
-              <div style={{
-                fontSize: '13px',
-                lineHeight: '1.7',
-                color: '#ececec',
-                whiteSpace: 'pre-wrap',
-                maxHeight: '200px',
-                overflowY: 'auto',
-              }}>
-                {meetingSummary}
-              </div>
-            </div>
-          )}
-
           <div className="transcript-container" ref={transcriptContainerRef}>
             {transcripts.length === 0 ? (
               <div className="empty-state">
@@ -680,6 +646,14 @@ function App() {
             )}
           </div>
         </div>
+
+        <SummaryPanel
+          summary={meetingSummary}
+          structuredSummary={structuredSummary}
+          isGenerating={isGeneratingSummary}
+          onGenerate={generateMeetingSummary}
+          hasTranscripts={transcripts.length > 0}
+        />
       </div>
     </div>
   );
