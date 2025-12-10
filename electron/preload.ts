@@ -39,4 +39,6 @@ export const registerPreloadApi = (
   });
 };
 
-registerPreloadApi(contextBridge, ipcRenderer);
+if (process.env.NODE_ENV !== 'test') {
+  registerPreloadApi(contextBridge, ipcRenderer);
+}
