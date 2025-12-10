@@ -1,3 +1,5 @@
+import { SUMMARY_ENDPOINT_URL } from '../config';
+
 // Backend API service for meeting summaries
 export interface SummaryResponse {
   summary: {
@@ -14,7 +16,7 @@ export interface SummaryRequest {
 }
 
 export class BackendSummaryService {
-  private apiUrl = 'https://meetlens-backend-5ptfw.ondigitalocean.app/summary';
+  private apiUrl = SUMMARY_ENDPOINT_URL;
 
   async generateSummary(
     sessionId: string,

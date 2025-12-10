@@ -1,3 +1,5 @@
+import { AUDIO_SAMPLE_RATE } from '../config';
+
 export interface ActiveApp {
   name: string;
   timestamp: string;
@@ -20,7 +22,7 @@ export class AudioCaptureService {
   ): Promise<boolean> {
     try {
       // Use higher sample rate for better quality
-      this.audioContext = new AudioContext({ sampleRate: 16000 });
+      this.audioContext = new AudioContext({ sampleRate: AUDIO_SAMPLE_RATE });
       this.activeApps = [];
 
       // Capture microphone
@@ -30,7 +32,7 @@ export class AudioCaptureService {
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
-            sampleRate: 16000,
+            sampleRate: AUDIO_SAMPLE_RATE,
           },
         });
         console.log('✓ Microphone captured successfully');
