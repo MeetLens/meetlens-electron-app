@@ -24,7 +24,6 @@ function App() {
   const [selectedLanguage, setSelectedLanguage] = useState('tr');
   const [elevenLabsApiKey, setElevenLabsApiKey] = useState('');
   const [deeplApiKey, setDeeplApiKey] = useState('');
-  const [geminiApiKey, setGeminiApiKey] = useState('');
   const [meetingSummary, setMeetingSummary] = useState('');
   const [structuredSummary, setStructuredSummary] = useState<SummaryResponse | null>(null);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
@@ -63,29 +62,23 @@ function App() {
   const loadApiKeys = () => {
     const savedElevenLabsKey = localStorage.getItem('elevenLabsApiKey');
     const savedDeeplKey = localStorage.getItem('deeplApiKey');
-    const savedGeminiKey = localStorage.getItem('geminiApiKey');
 
     if (savedElevenLabsKey) setElevenLabsApiKey(savedElevenLabsKey);
     if (savedDeeplKey) setDeeplApiKey(savedDeeplKey);
-    if (savedGeminiKey) setGeminiApiKey(savedGeminiKey);
 
     // Load from environment variables as fallback
     const envElevenLabsKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
     const envDeeplKey = import.meta.env.VITE_DEEPL_API_KEY;
-    const envGeminiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
     if (!savedElevenLabsKey && envElevenLabsKey) setElevenLabsApiKey(envElevenLabsKey);
     if (!savedDeeplKey && envDeeplKey) setDeeplApiKey(envDeeplKey);
-    if (!savedGeminiKey && envGeminiKey) setGeminiApiKey(envGeminiKey);
   };
 
-  const saveApiKeys = (elevenLabsKey: string, deeplKey: string, geminiKey: string) => {
+  const saveApiKeys = (elevenLabsKey: string, deeplKey: string) => {
     localStorage.setItem('elevenLabsApiKey', elevenLabsKey);
     localStorage.setItem('deeplApiKey', deeplKey);
-    localStorage.setItem('geminiApiKey', geminiKey);
     setElevenLabsApiKey(elevenLabsKey);
     setDeeplApiKey(deeplKey);
-    setGeminiApiKey(geminiKey);
   };
 
   const loadMeetings = async () => {
@@ -502,7 +495,6 @@ function App() {
         onStartStop={isRecording ? stopRecording : startRecording}
         elevenLabsApiKey={elevenLabsApiKey}
         deeplApiKey={deeplApiKey}
-        geminiApiKey={geminiApiKey}
         selectedLanguage={selectedLanguage}
         onSaveApiKeys={saveApiKeys}
         onLanguageChange={setSelectedLanguage}

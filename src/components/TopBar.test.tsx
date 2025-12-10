@@ -10,7 +10,6 @@ describe('TopBar', () => {
     onStartStop: vi.fn(),
     elevenLabsApiKey: 'eleven-key',
     deeplApiKey: 'deepl-key',
-    geminiApiKey: 'gemini-key',
     selectedLanguage: 'en',
     onSaveApiKeys: vi.fn(),
     onLanguageChange: vi.fn(),
@@ -45,22 +44,19 @@ describe('TopBar', () => {
 
     const elevenInput = await screen.findByLabelText(/elevenlabs api key/i);
     const deeplInput = screen.getByLabelText(/deepl api key/i);
-    const geminiInput = screen.getByLabelText(/google gemini api key/i);
     const languageSelect = screen.getByLabelText(/translation language/i);
 
     await user.clear(elevenInput);
     await user.type(elevenInput, 'new-eleven');
     await user.clear(deeplInput);
     await user.type(deeplInput, 'new-deepl');
-    await user.clear(geminiInput);
-    await user.type(geminiInput, 'new-gemini');
 
     await user.selectOptions(languageSelect, 'tr');
     expect(onLanguageChange).toHaveBeenCalledWith('tr');
 
     await user.click(screen.getByRole('button', { name: /save settings/i }));
 
-    expect(onSaveApiKeys).toHaveBeenCalledWith('new-eleven', 'new-deepl', 'new-gemini');
+    expect(onSaveApiKeys).toHaveBeenCalledWith('new-eleven', 'new-deepl');
     expect(screen.queryByText(/api settings/i)).not.toBeInTheDocument();
   });
 });

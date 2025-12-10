@@ -6,9 +6,8 @@ interface TopBarProps {
   onStartStop: () => void;
   elevenLabsApiKey: string;
   deeplApiKey: string;
-  geminiApiKey: string;
   selectedLanguage: string;
-  onSaveApiKeys: (elevenLabsKey: string, deeplKey: string, geminiKey: string) => void;
+  onSaveApiKeys: (elevenLabsKey: string, deeplKey: string) => void;
   onLanguageChange: (language: string) => void;
 }
 
@@ -35,7 +34,6 @@ function TopBar({
   onStartStop,
   elevenLabsApiKey,
   deeplApiKey,
-  geminiApiKey,
   selectedLanguage,
   onSaveApiKeys,
   onLanguageChange,
@@ -43,10 +41,9 @@ function TopBar({
   const [showSettings, setShowSettings] = useState(false);
   const [elevenLabsKey, setElevenLabsKey] = useState(elevenLabsApiKey);
   const [deeplKey, setDeeplKey] = useState(deeplApiKey);
-  const [geminiKey, setGeminiKey] = useState(geminiApiKey);
 
   const handleSaveSettings = () => {
-    onSaveApiKeys(elevenLabsKey, deeplKey, geminiKey);
+    onSaveApiKeys(elevenLabsKey, deeplKey);
     setShowSettings(false);
   };
 
@@ -158,26 +155,6 @@ function TopBar({
               />
               <p style={{ fontSize: '11px', color: '#8e8e8e', marginTop: '6px' }}>
                 Get your key at <a href="https://www.deepl.com/pro-api" target="_blank" rel="noopener noreferrer" style={{ color: '#10a37f', textDecoration: 'none' }}>deepl.com/pro-api</a> • Real-time translation
-              </p>
-            </div>
-
-            <div style={{ marginBottom: '22px' }}>
-              <label
-                htmlFor="geminiKey"
-                style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: '#d4d4d4' }}
-              >
-                Google Gemini API Key
-              </label>
-              <input
-                id="geminiKey"
-                type="password"
-                className="api-key-input"
-                value={geminiKey}
-                onChange={(e) => setGeminiKey(e.target.value)}
-                placeholder="AIza..."
-              />
-              <p style={{ fontSize: '11px', color: '#8e8e8e', marginTop: '6px' }}>
-                Get your key at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style={{ color: '#10a37f', textDecoration: 'none' }}>Google AI Studio</a> • AI summaries
               </p>
             </div>
 
