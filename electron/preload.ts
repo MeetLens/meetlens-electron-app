@@ -17,19 +17,26 @@ export interface Transcript {
   translation: string | null;
 }
 
-contextBridge.exposeInMainWorld('electronAPI', {
-  getAudioSources: () => ipcRenderer.invoke('get-audio-sources'),
-  createMeeting: (name: string) => ipcRenderer.invoke('create-meeting', name),
-  getMeetings: () => ipcRenderer.invoke('get-meetings'),
-  getMeeting: (id: number) => ipcRenderer.invoke('get-meeting', id),
-  saveTranscript: (meetingId: number, timestamp: string, text: string, translation?: string) =>
-    ipcRenderer.invoke('save-transcript', meetingId, timestamp, text, translation),
-  getTranscripts: (meetingId: number) => ipcRenderer.invoke('get-transcripts', meetingId),
-  clearTranscripts: (meetingId: number) => ipcRenderer.invoke('clear-transcripts', meetingId),
-  deleteMeeting: (id: number) => ipcRenderer.invoke('delete-meeting', id),
-  saveMeetingSummary: (meetingId: number, summary: string, fullTranscript: string) =>
-    ipcRenderer.invoke('save-meeting-summary', meetingId, summary, fullTranscript),
-  getMeetingSummary: (meetingId: number) => ipcRenderer.invoke('get-meeting-summary', meetingId),
-  translateText: (text: string, targetLang: string, apiKey: string) =>
-    ipcRenderer.invoke('translate-text', text, targetLang, apiKey),
-});
+export const registerPreloadApi = (
+  bridge: Pick<typeof contextBridge, 'exposeInMainWorld'>,
+  ipc: Pick<typeof ipcRenderer, 'invoke'>
+) => {
+  bridge.exposeInMainWorld('electronAPI', {
+    getAudioSources: () => ipc.invoke('get-audio-sources'),
+    createMeeting: (name: string) => ipc.invoke('create-meeting', name),
+    getMeetings: () => ipc.invoke('get-meetings'),
+    getMeeting: (id: number) => ipc.invoke('get-meeting', id),
+    saveTranscript: (meetingId: number, timestamp: string, text: string, translation?: string) =>
+      ipc.invoke('save-transcript', meetingId, timestamp, text, translation),
+    getTranscripts: (meetingId: number) => ipc.invoke('get-transcripts', meetingId),
+    clearTranscripts: (meetingId: number) => ipc.invoke('clear-transcripts', meetingId),
+    deleteMeeting: (id: number) => ipc.invoke('delete-meeting', id),
+    saveMeetingSummary: (meetingId: number, summary: string, fullTranscript: string) =>
+      ipc.invoke('save-meeting-summary', meetingId, summary, fullTranscript),
+    getMeetingSummary: (meetingId: number) => ipc.invoke('get-meeting-summary', meetingId),
+    translateText: (text: string, targetLang: string, apiKey: string) =>
+      ipc.invoke('translate-text', text, targetLang, apiKey),
+  });
+};
+
+registerPreloadApi(contextBridge, ipcRenderer);
