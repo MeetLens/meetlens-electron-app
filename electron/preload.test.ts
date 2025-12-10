@@ -53,7 +53,11 @@ describe('registerPreloadApi', () => {
     ],
     ['getMeetingSummary', [6], ['get-meeting-summary', 6]],
     ['translateText', ['text', 'es', 'api-key'], ['translate-text', 'text', 'es', 'api-key']],
-  ])('routes %s to ipcRenderer.invoke', (methodName, args, expectedInvokeArgs) => {
+  ])('routes %s to ipcRenderer.invoke', (
+    methodName: string,
+    args: unknown[],
+    expectedInvokeArgs: unknown[],
+  ) => {
     const api = getExposedApi();
 
     api[methodName as keyof typeof api](...(args as never[]));
