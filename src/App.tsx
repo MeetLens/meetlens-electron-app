@@ -2,10 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { Meeting, Transcript } from './types/electron';
 import { AudioCaptureService } from './services/audioService';
 import { TranslationService } from './services/translationService';
-import { BackendSummaryService } from './services/backendSummaryService';
+import { BackendSummaryService, type SummaryResponse } from './services/backendSummaryService';
 import { BackendTranscriptionService } from './services/backendTranscriptionService';
 import TopBar from './components/TopBar';
 import Sidebar from './components/Sidebar';
+import SummaryPanel from './components/SummaryPanel';
 
 interface TranscriptEntry {
   timestamp: string;
@@ -23,10 +24,9 @@ function App() {
   const [selectedLanguage, setSelectedLanguage] = useState('tr');
   const [elevenLabsApiKey, setElevenLabsApiKey] = useState('');
   const [deeplApiKey, setDeeplApiKey] = useState('');
-  const [geminiApiKey, setGeminiApiKey] = useState('');
   const [meetingSummary, setMeetingSummary] = useState('');
+  const [structuredSummary, setStructuredSummary] = useState<SummaryResponse | null>(null);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
-  const [showSummary, setShowSummary] = useState(false);
   const [stableTranslation, setStableTranslation] = useState('');
   const [partialTranslation, setPartialTranslation] = useState('');
 
@@ -62,29 +62,23 @@ function App() {
   const loadApiKeys = () => {
     const savedElevenLabsKey = localStorage.getItem('elevenLabsApiKey');
     const savedDeeplKey = localStorage.getItem('deeplApiKey');
-    const savedGeminiKey = localStorage.getItem('geminiApiKey');
 
     if (savedElevenLabsKey) setElevenLabsApiKey(savedElevenLabsKey);
     if (savedDeeplKey) setDeeplApiKey(savedDeeplKey);
-    if (savedGeminiKey) setGeminiApiKey(savedGeminiKey);
 
     // Load from environment variables as fallback
     const envElevenLabsKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
     const envDeeplKey = import.meta.env.VITE_DEEPL_API_KEY;
-    const envGeminiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
     if (!savedElevenLabsKey && envElevenLabsKey) setElevenLabsApiKey(envElevenLabsKey);
     if (!savedDeeplKey && envDeeplKey) setDeeplApiKey(envDeeplKey);
-    if (!savedGeminiKey && envGeminiKey) setGeminiApiKey(envGeminiKey);
   };
 
-  const saveApiKeys = (elevenLabsKey: string, deeplKey: string, geminiKey: string) => {
+  const saveApiKeys = (elevenLabsKey: string, deeplKey: string) => {
     localStorage.setItem('elevenLabsApiKey', elevenLabsKey);
     localStorage.setItem('deeplApiKey', deeplKey);
-    localStorage.setItem('geminiApiKey', geminiKey);
     setElevenLabsApiKey(elevenLabsKey);
     setDeeplApiKey(deeplKey);
-    setGeminiApiKey(geminiKey);
   };
 
   const loadMeetings = async () => {
@@ -117,6 +111,7 @@ function App() {
   const loadMeetingSummary = async (meetingId: number) => {
     const result = await window.electronAPI.getMeetingSummary(meetingId);
     setMeetingSummary(result.summary || '');
+    setStructuredSummary(null);
   };
 
   const createNewMeeting = async () => {
@@ -128,6 +123,7 @@ function App() {
     setCurrentMeeting(meeting);
     setTranscripts([]);
     setMeetingSummary('');
+    setStructuredSummary(null);
   };
 
   const selectMeeting = (meeting: Meeting) => {
@@ -144,6 +140,7 @@ function App() {
       setCurrentMeeting(updatedMeetings.length > 0 ? updatedMeetings[0] : null);
       setTranscripts([]);
       setMeetingSummary('');
+      setStructuredSummary(null);
     }
   };
 
@@ -153,6 +150,7 @@ function App() {
     await window.electronAPI.clearTranscripts(currentMeeting.id);
     setTranscripts([]);
     setMeetingSummary('');
+    setStructuredSummary(null);
   };
 
   const formatTimestamp = (): string => {
@@ -337,7 +335,7 @@ function App() {
       // Format for display and backward compatibility
       const formattedSummary = backendSummaryServiceRef.current.formatSummaryForDisplay(summaryResponse);
       setMeetingSummary(formattedSummary);
-      setShowSummary(true);
+      setStructuredSummary(summaryResponse);
 
       // Save summary to database
       await window.electronAPI.saveMeetingSummary(currentMeeting.id, formattedSummary, fullTranscript);
@@ -497,7 +495,6 @@ function App() {
         onStartStop={isRecording ? stopRecording : startRecording}
         elevenLabsApiKey={elevenLabsApiKey}
         deeplApiKey={deeplApiKey}
-        geminiApiKey={geminiApiKey}
         selectedLanguage={selectedLanguage}
         onSaveApiKeys={saveApiKeys}
         onLanguageChange={setSelectedLanguage}
@@ -535,45 +532,6 @@ function App() {
               </button>
             </div>
           </div>
-
-          {showSummary && meetingSummary && (
-            <div style={{
-              padding: '16px 20px',
-              background: 'rgba(16, 163, 127, 0.1)',
-              borderBottom: '1px solid rgba(16, 163, 127, 0.2)',
-              position: 'relative'
-            }}>
-              <button
-                onClick={() => setShowSummary(false)}
-                style={{
-                  position: 'absolute',
-                  top: '12px',
-                  right: '12px',
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#8e8e8e',
-                  fontSize: '20px',
-                  cursor: 'pointer',
-                  padding: '4px 8px',
-                }}
-              >
-                ×
-              </button>
-              <h3 style={{ fontSize: '13px', color: '#10a37f', marginBottom: '10px', fontWeight: 600 }}>
-                AI Summary
-              </h3>
-              <div style={{
-                fontSize: '13px',
-                lineHeight: '1.7',
-                color: '#ececec',
-                whiteSpace: 'pre-wrap',
-                maxHeight: '200px',
-                overflowY: 'auto',
-              }}>
-                {meetingSummary}
-              </div>
-            </div>
-          )}
 
           <div className="transcript-container" ref={transcriptContainerRef}>
             {transcripts.length === 0 ? (
@@ -680,6 +638,14 @@ function App() {
             )}
           </div>
         </div>
+
+        <SummaryPanel
+          summary={meetingSummary}
+          structuredSummary={structuredSummary}
+          isGenerating={isGeneratingSummary}
+          onGenerate={generateMeetingSummary}
+          hasTranscripts={transcripts.length > 0}
+        />
       </div>
     </div>
   );
