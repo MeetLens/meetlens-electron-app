@@ -17,7 +17,7 @@ export interface EndSessionMessage {
 export interface TranscriptPartialMessage {
   type: 'transcript_partial';
   session_id: string;
-  chunk_id: string;
+  chunk_id: number;
   text: string;
 }
 
@@ -25,6 +25,8 @@ export interface TranscriptStableMessage {
   type: 'transcript_stable';
   session_id: string;
   text: string;
+  full_text?: string;
+  chunk_id?: number;
 }
 
 export interface TranslationPartialMessage {
@@ -60,15 +62,24 @@ export class BackendTranscriptionService {
   private ws: WebSocket | null = null;
   private sessionId: string;
   private wsUrl: string;
-  private chunkIdCounter = 0;
+  private chunkIdCounter = 1;
   private audioContext: AudioContext | null = null;
   private workletNode: AudioWorkletNode | null = null;
   private isRecording = false;
 
   // Callbacks
-  private onTranscriptCallback: ((text: string) => void) | null = null;
-  private onTranslationPartialCallback: ((text: string) => void) | null = null;
-  private onTranslationStableCallback: ((text: string) => void) | null = null;
+  private onTranscriptPartialCallback:
+    | ((text: string, sessionId: string) => void | Promise<void>)
+    | null = null;
+  private onTranscriptStableCallback:
+    | ((text: string, sessionId: string, fullText?: string) => void | Promise<void>)
+    | null = null;
+  private onTranslationPartialCallback:
+    | ((text: string, sessionId: string) => void | Promise<void>)
+    | null = null;
+  private onTranslationStableCallback:
+    | ((text: string, sessionId: string) => void | Promise<void>)
+    | null = null;
   private onErrorCallback: ((error: string) => void) | null = null;
   private onConnectionCallback: ((connected: boolean) => void) | null = null;
 
@@ -81,15 +92,21 @@ export class BackendTranscriptionService {
    * Connect to backend WebSocket and set up message handlers
    */
   async connect(
-    onTranscript: (text: string) => void,
-    onTranslationPartial: (text: string) => void,
-    onTranslationStable: (text: string) => void,
+    onTranscriptPartial: (text: string, sessionId: string) => void | Promise<void>,
+    onTranscriptStable: (
+      text: string,
+      sessionId: string,
+      fullText?: string
+    ) => void | Promise<void>,
+    onTranslationPartial: (text: string, sessionId: string) => void | Promise<void>,
+    onTranslationStable: (text: string, sessionId: string) => void | Promise<void>,
     onConnection: (connected: boolean) => void,
     onError: (error: string) => void
   ): Promise<boolean> {
     return new Promise((resolve, reject) => {
       try {
-        this.onTranscriptCallback = onTranscript;
+        this.onTranscriptPartialCallback = onTranscriptPartial;
+        this.onTranscriptStableCallback = onTranscriptStable;
         this.onTranslationPartialCallback = onTranslationPartial;
         this.onTranslationStableCallback = onTranslationStable;
         this.onConnectionCallback = onConnection;
@@ -142,6 +159,16 @@ export class BackendTranscriptionService {
    * Handle incoming messages from backend
    */
   private handleServerMessage(message: ServerMessage) {
+    if (message.session_id !== this.sessionId) {
+      console.warn(
+        '[BackendTranscription] Ignoring message for different session',
+        message.session_id,
+        'current:',
+        this.sessionId
+      );
+      return;
+    }
+
     console.log('📥 Received message:', message.type, message);
 
     switch (message.type) {
@@ -149,16 +176,23 @@ export class BackendTranscriptionService {
         // Show partial transcripts since backend might not send stable ones
         console.log('🔄 Partial transcript:', message.text);
         // Only update if text has changed to avoid unnecessary re-renders
-        if (this.onTranscriptCallback && message.text && message.text.trim()) {
-          this.onTranscriptCallback(message.text);
+        if (this.onTranscriptPartialCallback && message.text && message.text.trim()) {
+          this.onTranscriptPartialCallback(message.text, message.session_id);
         }
         break;
 
       case 'transcript_stable':
         // Send stable transcripts to UI
-        console.log('✅ Stable transcript:', message.text);
-        if (this.onTranscriptCallback && message.text && message.text.trim()) {
-          this.onTranscriptCallback(message.text);
+        console.log('✅ Stable transcript:', message.text || message.full_text);
+        if (
+          this.onTranscriptStableCallback &&
+          (message.text?.trim() || message.full_text?.trim())
+        ) {
+          this.onTranscriptStableCallback(
+            message.text || '',
+            message.session_id,
+            message.full_text
+          );
         } else {
           console.warn('⚠️ No transcript callback or empty text');
         }
@@ -168,7 +202,7 @@ export class BackendTranscriptionService {
         // Unstable translation preview - replace current partial
         console.log('🌐 Translation partial:', message.text);
         if (this.onTranslationPartialCallback && message.text && message.text.trim()) {
-          this.onTranslationPartialCallback(message.text);
+          this.onTranslationPartialCallback(message.text, message.session_id);
         } else {
           console.warn('⚠️ No translation partial callback or empty text');
         }
@@ -178,7 +212,7 @@ export class BackendTranscriptionService {
         // Stable translation segment - append to history
         console.log('🌐 Translation stable:', message.text);
         if (this.onTranslationStableCallback && message.text && message.text.trim()) {
-          this.onTranslationStableCallback(message.text);
+          this.onTranslationStableCallback(message.text, message.session_id);
         } else {
           console.warn('⚠️ No translation stable callback or empty text');
         }
@@ -201,6 +235,9 @@ export class BackendTranscriptionService {
    */
   async setupMediaRecorder(stream: MediaStream) {
     try {
+      // Reset chunk counter at the start of each recording session
+      this.chunkIdCounter = 1;
+
       // Use default device sample rate; resample in JS to 16 kHz before sending
       this.audioContext = new AudioContext();
       console.log('[BackendTranscription] AudioContext created with state:', this.audioContext.state);

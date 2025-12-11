@@ -29,6 +29,7 @@ function App() {
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [stableTranslation, setStableTranslation] = useState('');
   const [partialTranslation, setPartialTranslation] = useState('');
+  const [partialTranscript, setPartialTranscript] = useState('');
 
   const audioServiceRef = useRef<AudioCaptureService | null>(null);
   const translationServiceRef = useRef<TranslationService | null>(null);
@@ -38,6 +39,7 @@ function App() {
   const currentSessionIdRef = useRef<string | null>(null);
   const stableTranslationRef = useRef('');
   const partialTranslationRef = useRef('');
+  const partialTranscriptRef = useRef('');
 
   useEffect(() => {
     loadMeetings();
@@ -158,20 +160,50 @@ function App() {
     return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
   };
 
-  const updateLatestTranscriptTranslation = (translationText: string) => {
+  const cleanTranscriptText = (text: string): string => {
+    return text.replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
+  };
+
+  const upsertTranscriptEntry = (
+    sessionId: string,
+    updater: (entry: TranscriptEntry) => TranscriptEntry
+  ) => {
     setTranscripts((prev) => {
-      if (prev.length === 0) {
-        return prev;
+      const existingIndex = prev.findIndex((entry) => entry.sessionId === sessionId);
+
+      if (existingIndex === -1) {
+        const baseEntry: TranscriptEntry = {
+          timestamp: formatTimestamp(),
+          text: '',
+          translation: undefined,
+          sessionId,
+        };
+        return [...prev, updater(baseEntry)];
       }
 
-      const lastIndex = prev.length - 1;
-      const updatedEntry = {
-        ...prev[lastIndex],
-        translation: translationText.trim(),
-      };
-
-      return [...prev.slice(0, lastIndex), updatedEntry];
+      const updatedEntry = updater(prev[existingIndex]);
+      const next = [...prev];
+      next[existingIndex] = updatedEntry;
+      return next;
     });
+  };
+
+  const updateTranscriptTranslationForSession = (sessionId: string, translationText: string) => {
+    const trimmed = translationText.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    upsertTranscriptEntry(sessionId, (entry) => ({
+      ...entry,
+      translation: trimmed,
+      sessionId,
+    }));
+  };
+
+  const resetTranscriptPreview = () => {
+    partialTranscriptRef.current = '';
+    setPartialTranscript('');
   };
 
   const resetTranslationState = () => {
@@ -181,27 +213,79 @@ function App() {
     setPartialTranslation('');
   };
 
-  const handleTranscriptWithMeeting = async (text: string, meeting: Meeting) => {
-    console.log('🎤 handleTranscriptWithMeeting called:', { text, meetingId: meeting?.id });
+  const handleTranscriptPartialWithMeeting = (
+    text: string,
+    sessionId: string,
+    meeting: Meeting
+  ) => {
+    console.log('🎤 handleTranscriptPartialWithMeeting called:', {
+      text,
+      meetingId: meeting?.id,
+      sessionId,
+    });
 
     if (!meeting || !text || text.trim().length === 0) {
       console.log('⚠️ Skipping transcript - invalid data');
       return;
     }
 
-    // Remove noise markers in parentheses like (music), (silence), (upbeat music), etc.
-    const cleanedText = text.replace(/\s*\([^)]*\)\s*/g, ' ').trim();
-    if (!cleanedText) {
-      console.log('⚠️ Skipping transcript - only noise markers');
-      return; // Skip if only noise markers
+    if (sessionId !== currentSessionIdRef.current) {
+      console.log('⚠️ Skipping transcript - session mismatch');
+      return;
     }
 
-    console.log('✅ Processing transcript:', cleanedText, 'for meeting:', meeting.id);
+    const cleanedText = cleanTranscriptText(text);
+    if (!cleanedText) {
+      console.log('⚠️ Skipping transcript - only noise markers');
+      return;
+    }
 
-    const timestamp = formatTimestamp();
-    let translation: string | undefined;
+    partialTranscriptRef.current = cleanedText;
+    setPartialTranscript(cleanedText);
 
-    // Translate using DeepL if API key is available and language is not English
+    upsertTranscriptEntry(sessionId, (entry) => ({
+      ...entry,
+      sessionId,
+    }));
+  };
+
+  const handleTranscriptStableWithMeeting = async (
+    text: string,
+    sessionId: string,
+    meeting: Meeting,
+    fullText?: string
+  ) => {
+    console.log('🎤 handleTranscriptStableWithMeeting called:', {
+      text,
+      sessionId,
+      meetingId: meeting?.id,
+      fullText,
+    });
+
+    if (!meeting) {
+      console.log('⚠️ Skipping stable transcript - invalid meeting');
+      return;
+    }
+
+    if (sessionId !== currentSessionIdRef.current) {
+      console.log('⚠️ Skipping stable transcript - session mismatch');
+      return;
+    }
+
+    const baseText = fullText && fullText.trim() ? fullText : text;
+    if (!baseText || baseText.trim().length === 0) {
+      console.log('⚠️ Skipping stable transcript - invalid data');
+      return;
+    }
+    const cleanedText = cleanTranscriptText(baseText);
+    if (!cleanedText) {
+      console.log('⚠️ Skipping stable transcript - only noise markers');
+      resetTranscriptPreview();
+      return;
+    }
+
+    let translatedText: string | undefined;
+
     if (deeplApiKey && selectedLanguage !== 'en') {
       if (!translationServiceRef.current) {
         translationServiceRef.current = new TranslationService(deeplApiKey, selectedLanguage);
@@ -209,84 +293,90 @@ function App() {
       translationServiceRef.current.setTargetLanguage(selectedLanguage);
       try {
         console.log('🌐 Translating with DeepL:', cleanedText.substring(0, 50) + '...');
-        translation = await translationServiceRef.current.translate(cleanedText);
-        console.log('✅ Translation received from DeepL:', translation?.substring(0, 50) + '...');
+        translatedText = await translationServiceRef.current.translate(cleanedText);
+        console.log('✅ Translation received from DeepL:', translatedText?.substring(0, 50) + '...');
       } catch (err) {
         console.error('❌ Translation failed:', err);
       }
     }
 
-    // Parent-Child Hierarchy:
-    // - Parent: Meeting Session (container for all audio bubbles)
-    // - Child: Audio Bubble (each Start/Stop creates a new bubble)
-    // 
-    // Within one recording session: REPLACE text (backend sends cumulative transcripts)
-    // Each new Start/Stop recording: CREATE new Audio Bubble (stacked like chat messages)
-    const sessionId = currentSessionIdRef.current;
+    upsertTranscriptEntry(sessionId, (entry) => {
+      const nextText = fullText
+        ? cleanedText
+        : [entry.text, cleanedText].filter(Boolean).join(' ').trim();
 
-    setTranscripts((prev) => {
-      // Find the bubble for this session by sessionId
-      const existingBubbleIndex = prev.findIndex((entry) => entry.sessionId === sessionId);
-
-      if (existingBubbleIndex !== -1) {
-        // Same recording session: REPLACE text (backend sends cumulative)
-        console.log('📝 Replacing text in Audio Bubble for session:', sessionId);
-        const updated = [...prev];
-        updated[existingBubbleIndex] = {
-          ...updated[existingBubbleIndex],
-          text: cleanedText, // REPLACE with latest cumulative text
-          translation: translation || updated[existingBubbleIndex].translation,
-        };
-        return updated;
-      } else if (isRecording && prev.length > 0) {
-        // Recording active but no session match - update the LAST bubble
-        // This handles cases where meeting was switched during recording
-        console.log('📝 Updating last bubble (recording active, no session match)');
-        const updated = [...prev];
-        const lastIndex = prev.length - 1;
-        updated[lastIndex] = {
-          ...updated[lastIndex],
-          text: cleanedText,
-          translation: translation || updated[lastIndex].translation,
-          sessionId: sessionId // Tag it with current session
-        };
-        return updated;
-      } else {
-        // New recording session: CREATE new Audio Bubble
-        console.log('📝 Creating new Audio Bubble for session:', sessionId);
-        return [...prev, { timestamp, text: cleanedText, translation, sessionId }];
-      }
+      return {
+        ...entry,
+        text: nextText,
+        translation: translatedText
+          ? fullText
+            ? translatedText
+            : [entry.translation, translatedText].filter(Boolean).join(' ').trim()
+          : entry.translation,
+        sessionId,
+      };
     });
 
-    // Note: We don't save each partial transcript here anymore
-    // The final combined text will be saved at stopRecording
+    resetTranscriptPreview();
   };
 
-  const handleTranslationPartialWithMeeting = (translation: string, meeting: Meeting) => {
-    console.log('🌐 handleTranslationPartialWithMeeting called:', { translation, meetingId: meeting?.id });
+  const handleTranslationPartialWithMeeting = (
+    translation: string,
+    sessionId: string,
+    meeting: Meeting
+  ) => {
+    console.log('🌐 handleTranslationPartialWithMeeting called:', {
+      translation,
+      meetingId: meeting?.id,
+      sessionId,
+    });
 
     if (!meeting || !translation || translation.trim().length === 0) {
       console.log('⚠️ Skipping partial translation - invalid data');
       return;
     }
 
-    partialTranslationRef.current = translation;
-    setPartialTranslation(translation);
+    if (sessionId !== currentSessionIdRef.current) {
+      console.log('⚠️ Skipping partial translation - session mismatch');
+      return;
+    }
 
-    const combined = [stableTranslationRef.current, translation].filter(Boolean).join(' ').trim();
-    updateLatestTranscriptTranslation(combined);
+    const trimmedTranslation = translation.trim();
+    partialTranslationRef.current = trimmedTranslation;
+    setPartialTranslation(trimmedTranslation);
+
+    // Ensure there is a bubble to attach translations to
+    upsertTranscriptEntry(sessionId, (entry) => ({
+      ...entry,
+      sessionId,
+    }));
   };
 
-  const handleTranslationStableWithMeeting = (translation: string, meeting: Meeting) => {
-    console.log('🌐 handleTranslationStableWithMeeting called:', { translation, meetingId: meeting?.id });
+  const handleTranslationStableWithMeeting = (
+    translation: string,
+    sessionId: string,
+    meeting: Meeting
+  ) => {
+    console.log('🌐 handleTranslationStableWithMeeting called:', {
+      translation,
+      meetingId: meeting?.id,
+      sessionId,
+    });
 
     if (!meeting || !translation || translation.trim().length === 0) {
       console.log('⚠️ Skipping stable translation - invalid data');
       return;
     }
 
+    if (sessionId !== currentSessionIdRef.current) {
+      console.log('⚠️ Skipping stable translation - session mismatch');
+      return;
+    }
+
+    const trimmedTranslation = translation.trim();
+
     setStableTranslation((prev) => {
-      const next = [prev, translation].filter(Boolean).join(' ').trim();
+      const next = [prev, trimmedTranslation].filter(Boolean).join(' ').trim();
       stableTranslationRef.current = next;
       return next;
     });
@@ -294,9 +384,7 @@ function App() {
     partialTranslationRef.current = '';
     setPartialTranslation('');
 
-    updateLatestTranscriptTranslation(
-      [stableTranslationRef.current, partialTranslationRef.current].filter(Boolean).join(' ').trim()
-    );
+    updateTranscriptTranslationForSession(sessionId, stableTranslationRef.current);
   };
 
   const generateMeetingSummary = async () => {
@@ -361,7 +449,12 @@ function App() {
     }
 
     // Generate a new session ID for this recording session
-    currentSessionIdRef.current = `session-${Date.now()}`;
+    const newSessionId =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `session-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    currentSessionIdRef.current = newSessionId;
+    resetTranscriptPreview();
     resetTranslationState();
 
     try {
@@ -370,18 +463,24 @@ function App() {
 
       // Initialize backend transcription service
       backendTranscriptionServiceRef.current = new BackendTranscriptionService(
-        activeMeeting.id.toString()
+        newSessionId
         // Uses default production WebSocket URL
       );
 
       // Connect to backend WebSocket
       const connected = await backendTranscriptionServiceRef.current.connect(
         // Transcript callback
-        (text: string) => handleTranscriptWithMeeting(text, activeMeeting!),
+        (text: string, sessionId: string) =>
+          handleTranscriptPartialWithMeeting(text, sessionId, activeMeeting!),
+        // Transcript stable callback
+        (text: string, sessionId: string, fullText?: string) =>
+          handleTranscriptStableWithMeeting(text, sessionId, activeMeeting!, fullText),
         // Translation partial callback
-        (translation: string) => handleTranslationPartialWithMeeting(translation, activeMeeting!),
+        (translation: string, sessionId: string) =>
+          handleTranslationPartialWithMeeting(translation, sessionId, activeMeeting!),
         // Translation stable callback
-        (translation: string) => handleTranslationStableWithMeeting(translation, activeMeeting!),
+        (translation: string, sessionId: string) =>
+          handleTranslationStableWithMeeting(translation, sessionId, activeMeeting!),
         // Connection status callback
         setIsConnected,
         // Error callback
@@ -436,22 +535,37 @@ function App() {
     if (currentMeeting && sessionId) {
       // Find the bubble for this session
       const sessionBubble = transcripts.find((t) => t.sessionId === sessionId);
-      if (sessionBubble && sessionBubble.text) {
-        console.log('💾 Saving session transcript to database:', sessionBubble.text.substring(0, 50) + '...');
-        const combinedTranslation = [stableTranslationRef.current, partialTranslationRef.current]
-          .filter(Boolean)
-          .join(' ')
-          .trim();
-        const translationToPersist = sessionBubble.translation || combinedTranslation || undefined;
+      const transcriptText =
+        (sessionBubble?.text && sessionBubble.text.trim().length > 0)
+          ? sessionBubble.text
+          : partialTranscriptRef.current;
+      const normalizedTranscriptText = transcriptText?.trim();
 
-        if (!sessionBubble.translation && translationToPersist) {
-          updateLatestTranscriptTranslation(translationToPersist);
-        }
+      if (sessionBubble && normalizedTranscriptText) {
+        console.log(
+          '💾 Saving session transcript to database:',
+          normalizedTranscriptText.substring(0, 50) + '...'
+        );
+        const translationSource = sessionBubble.translation || stableTranslationRef.current;
+        const combinedTranslation =
+          translationSource && translationSource.trim().length > 0
+            ? translationSource
+            : partialTranslationRef.current;
+        const translationToPersist = combinedTranslation?.trim() || undefined;
+        const timestampForSave = sessionBubble.timestamp || formatTimestamp();
+
+        upsertTranscriptEntry(sessionId, (entry) => ({
+          ...entry,
+          text: normalizedTranscriptText,
+          translation: translationToPersist || entry.translation,
+          sessionId,
+          timestamp: timestampForSave,
+        }));
 
         await window.electronAPI.saveTranscript(
           currentMeeting.id,
-          sessionBubble.timestamp,
-          sessionBubble.text,
+          timestampForSave,
+          normalizedTranscriptText,
           translationToPersist
         );
       }
@@ -472,6 +586,7 @@ function App() {
     setIsRecording(false);
     setIsConnected(false);
 
+    resetTranscriptPreview();
     resetTranslationState();
 
     // Clear session ID
@@ -578,43 +693,59 @@ function App() {
               </div>
             ) : (
               <>
-                {transcripts.map((entry, index) => (
-                  <div
-                    key={(entry as any).sessionId || index}
-                    className="transcript-entry"
-                    style={{
-                      animation: index === transcripts.length - 1 ? 'slideIn 0.3s ease-out' : 'none'
-                    }}
-                  >
-                    <div className="transcript-timestamp">{entry.timestamp}</div>
-                    <div className="transcript-text">{entry.text}</div>
-                    {entry.translation && (
-                      <div className="transcript-translation" style={{
-                        marginTop: '8px',
-                        color: '#10a37f',
-                        fontSize: '13px'
-                      }}>
-                        {isRecording && index === transcripts.length - 1 ? (
-                          <>
-                            {(stableTranslation || (!partialTranslation && entry.translation)) && (
-                              <span style={{ color: '#111111', fontStyle: 'normal' }}>
-                                {stableTranslation || entry.translation}
-                              </span>
-                            )}
-                            {partialTranslation && (
-                              <span style={{ color: '#9aa0a6', fontStyle: 'italic' }}>
-                                {stableTranslation ? ' ' : ''}
-                                {partialTranslation}
-                              </span>
-                            )}
-                          </>
-                        ) : (
-                          entry.translation
+                {transcripts.map((entry, index) => {
+                  const isActiveSessionBubble =
+                    isRecording && entry.sessionId === currentSessionIdRef.current;
+                  const showTranslation =
+                    entry.translation ||
+                    (isActiveSessionBubble && (stableTranslation || partialTranslation));
+
+                  return (
+                    <div
+                      key={(entry as any).sessionId || index}
+                      className="transcript-entry"
+                      style={{
+                        animation: index === transcripts.length - 1 ? 'slideIn 0.3s ease-out' : 'none'
+                      }}
+                    >
+                      <div className="transcript-timestamp">{entry.timestamp}</div>
+                      <div className="transcript-text">
+                        {entry.text}
+                        {isActiveSessionBubble && partialTranscript && (
+                          <span style={{ color: '#9aa0a6', fontStyle: 'italic' }}>
+                            {entry.text ? ' ' : ''}
+                            {partialTranscript}
+                          </span>
                         )}
                       </div>
-                    )}
-                  </div>
-                ))}
+                      {showTranslation && (
+                        <div className="transcript-translation" style={{
+                          marginTop: '8px',
+                          color: '#10a37f',
+                          fontSize: '13px'
+                        }}>
+                          {isActiveSessionBubble ? (
+                            <>
+                              {(stableTranslation || (!partialTranslation && entry.translation)) && (
+                                <span style={{ color: '#111111', fontStyle: 'normal' }}>
+                                  {stableTranslation || entry.translation}
+                                </span>
+                              )}
+                              {partialTranslation && (
+                                <span style={{ color: '#9aa0a6', fontStyle: 'italic' }}>
+                                  {stableTranslation ? ' ' : ''}
+                                  {partialTranslation}
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            entry.translation
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
                 {isRecording && (
                   <div style={{
                     display: 'flex',
