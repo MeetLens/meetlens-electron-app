@@ -50,7 +50,7 @@ function SummaryPanel({ summary, structuredSummary, isGenerating, onGenerate, ha
             <div className="empty-text">Generating summary...</div>
           </div>
         ) : structuredSummary ? (
-          <div style={{ color: '#ececec', fontSize: '13px', lineHeight: '1.7' }}>
+          <div style={{ color: '#111', fontSize: '13px', lineHeight: '1.7' }}>
             {/* Short Overview */}
             <div style={{
               marginBottom: '20px',
@@ -136,7 +136,7 @@ function SummaryPanel({ summary, structuredSummary, isGenerating, onGenerate, ha
           </div>
         ) : summary ? (
           // Fallback to plain text summary for backward compatibility
-          <div style={{ color: '#ececec', fontSize: '13px', lineHeight: '1.7', whiteSpace: 'pre-wrap' }}>
+          <div style={{ color: '#111111', fontSize: '13px', lineHeight: '1.7', whiteSpace: 'pre-wrap' }}>
             {summary}
           </div>
         ) : (
