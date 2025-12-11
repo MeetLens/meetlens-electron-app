@@ -597,7 +597,7 @@ function App() {
                         {isRecording && index === transcripts.length - 1 ? (
                           <>
                             {(stableTranslation || (!partialTranslation && entry.translation)) && (
-                              <span style={{ color: '#ececec', fontStyle: 'normal' }}>
+                              <span style={{ color: '#111111', fontStyle: 'normal' }}>
                                 {stableTranslation || entry.translation}
                               </span>
                             )}
