@@ -87,42 +87,12 @@ function TopBar({
       </div>
 
       {showSettings && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.85)',
-            backdropFilter: 'blur(8px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
-          onClick={() => setShowSettings(false)}
-        >
-          <div
-            style={{
-              background: '#202020',
-              padding: '28px',
-              borderRadius: '16px',
-              width: '540px',
-              maxHeight: '85vh',
-              overflow: 'auto',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 style={{ marginBottom: '24px', fontSize: '18px', fontWeight: 600, color: '#ececec' }}>API Settings</h2>
+        <div className="settings-overlay" onClick={() => setShowSettings(false)}>
+          <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
+            <h2 className="settings-title">API Settings</h2>
 
-            <div style={{ marginBottom: '18px' }}>
-              <label
-                htmlFor="elevenLabsKey"
-                style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: '#d4d4d4' }}
-              >
+            <div className="settings-field">
+              <label htmlFor="elevenLabsKey" className="settings-label">
                 ElevenLabs API Key
               </label>
               <input
@@ -133,16 +103,17 @@ function TopBar({
                 onChange={(e) => setElevenLabsKey(e.target.value)}
                 placeholder="sk_..."
               />
-              <p style={{ fontSize: '11px', color: '#8e8e8e', marginTop: '6px' }}>
-                Get your key at <a href="https://elevenlabs.io" target="_blank" rel="noopener noreferrer" style={{ color: '#10a37f', textDecoration: 'none' }}>elevenlabs.io</a> • Used for speech-to-text
+              <p className="settings-helper">
+                Get your key at{' '}
+                <a href="https://elevenlabs.io" target="_blank" rel="noopener noreferrer">
+                  elevenlabs.io
+                </a>{' '}
+                • Used for speech-to-text
               </p>
             </div>
 
-            <div style={{ marginBottom: '18px' }}>
-              <label
-                htmlFor="deeplKey"
-                style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: '#d4d4d4' }}
-              >
+            <div className="settings-field">
+              <label htmlFor="deeplKey" className="settings-label">
                 DeepL API Key
               </label>
               <input
@@ -153,63 +124,46 @@ function TopBar({
                 onChange={(e) => setDeeplKey(e.target.value)}
                 placeholder="xxx:fx"
               />
-              <p style={{ fontSize: '11px', color: '#8e8e8e', marginTop: '6px' }}>
-                Get your key at <a href="https://www.deepl.com/pro-api" target="_blank" rel="noopener noreferrer" style={{ color: '#10a37f', textDecoration: 'none' }}>deepl.com/pro-api</a> • Real-time translation
+              <p className="settings-helper">
+                Get your key at{' '}
+                <a href="https://www.deepl.com/pro-api" target="_blank" rel="noopener noreferrer">
+                  deepl.com/pro-api
+                </a>{' '}
+                • Real-time translation
               </p>
             </div>
 
-            <div style={{ marginBottom: '22px' }}>
-              <label
-                htmlFor="translationLanguage"
-                style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: '#d4d4d4' }}
-              >
+            <div className="settings-field settings-field-large">
+              <label htmlFor="translationLanguage" className="settings-label">
                 Translation Language
               </label>
               <select
                 id="translationLanguage"
-                className="api-key-input"
+                className="api-key-input settings-select"
                 value={selectedLanguage}
                 onChange={(e) => onLanguageChange(e.target.value)}
-                style={{
-                  cursor: 'pointer',
-                  backgroundColor: '#2a2a2a',
-                  color: '#ececec',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '8px',
-                  padding: '10px 14px',
-                  fontSize: '14px',
-                  width: '100%',
-                  appearance: 'none',
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 12px center',
-                }}
               >
                 {LANGUAGES.map((lang) => (
-                  <option
-                    key={lang.code}
-                    value={lang.code}
-                    style={{ backgroundColor: '#2a2a2a', color: '#ececec' }}
-                  >
+                  <option key={lang.code} value={lang.code}>
                     {lang.name}
                   </option>
                 ))}
               </select>
-              <p style={{ fontSize: '11px', color: '#8e8e8e', marginTop: '6px' }}>
+              <p className="settings-helper">
                 Transcripts will be translated to this language in real-time
               </p>
             </div>
 
-            <div style={{ padding: '14px', background: 'rgba(16, 163, 127, 0.1)', borderRadius: '10px', marginBottom: '24px', border: '1px solid rgba(16, 163, 127, 0.2)' }}>
-              <h3 style={{ fontSize: '13px', marginBottom: '10px', color: '#10a37f', fontWeight: 600 }}>Features</h3>
-              <ul style={{ fontSize: '12px', lineHeight: '1.7', paddingLeft: '18px', color: '#d4d4d4', margin: 0 }}>
+            <div className="settings-feature-card">
+              <h3 className="settings-feature-title">Features</h3>
+              <ul className="settings-feature-list">
                 <li>Real-time multilingual transcription</li>
                 <li>Instant translation to 12+ languages</li>
                 <li>AI-powered meeting summaries</li>
               </ul>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+            <div className="settings-actions">
               <button
                 className="clear-button"
                 onClick={() => setShowSettings(false)}
@@ -219,7 +173,6 @@ function TopBar({
               <button
                 className="record-button start"
                 onClick={handleSaveSettings}
-                style={{ padding: '8px 24px' }}
               >
                 Save Settings
               </button>
