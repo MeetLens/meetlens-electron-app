@@ -4,6 +4,7 @@ import {
   session,
   desktopCapturer,
   ipcMain,
+  systemPreferences,
   type IpcMainInvokeEvent,
 } from 'electron';
 import path from 'path';
@@ -89,7 +90,7 @@ export function createWindow() {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+    mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   }
 
   mainWindow.on('closed', () => {
@@ -112,24 +113,79 @@ function configureDisplayMediaHandling() {
   // Provide display media (screen + loopback audio) to renderer via getDisplayMedia
   session.defaultSession.setDisplayMediaRequestHandler(async (_request, callback) => {
     try {
+      console.log('[Main] Display media request handler called');
       const sources = await desktopCapturer.getSources({ types: ['screen', 'window'] });
+      console.log('[Main] Found', sources.length, 'capture sources');
+
       // Prefer primary screen; fall back to first
       const screenSource =
         sources.find((source) => source.name === 'Entire Screen' || source.name === 'Screen 1') ||
         sources[0];
+
+      console.log('[Main] Selected source:', screenSource?.name, 'with loopback audio');
 
       callback({
         video: screenSource,
         audio: 'loopback',
       });
     } catch (error) {
-      console.error('Error handling display media request:', error);
+      console.error('[Main] Error handling display media request:', error);
       callback({ video: undefined, audio: undefined });
     }
   });
 }
 
 export function registerIpcHandlers(database: Database) {
+  // Open System Settings for screen recording permission
+  ipcMain.handle('open-screen-recording-settings', async () => {
+    if (process.platform === 'darwin') {
+      const { shell } = require('electron');
+      // Open Privacy & Security > Screen Recording in System Settings
+      await shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture');
+      return true;
+    }
+    return false;
+  });
+
+  // Check screen recording permission on macOS
+  ipcMain.handle('check-screen-permission', async () => {
+    if (process.platform === 'darwin') {
+      // On macOS, we need to actually try to access desktopCapturer to trigger permission
+      try {
+        const sources = await desktopCapturer.getSources({ types: ['screen'] });
+        console.log('[Main] Screen recording permission check: found', sources.length, 'sources');
+        return sources.length > 0;
+      } catch (error) {
+        console.error('[Main] Screen recording permission denied:', error);
+        return false;
+      }
+    }
+    return true; // Non-macOS platforms
+  });
+
+  // Get screen source ID for use with getUserMedia
+  ipcMain.handle('get-screen-source-id', async () => {
+    try {
+      const sources = await desktopCapturer.getSources({ types: ['screen'] });
+      console.log('[Main] get-screen-source-id: found', sources.length, 'sources');
+
+      // Return the primary screen source
+      const primarySource = sources.find(
+        source => source.name === 'Entire Screen' || source.name === 'Screen 1' || source.name.includes('Bildschirm')
+      ) || sources[0];
+
+      if (primarySource) {
+        console.log('[Main] Returning source ID:', primarySource.id, 'for', primarySource.name);
+        return { id: primarySource.id, name: primarySource.name };
+      }
+
+      return null;
+    } catch (error) {
+      console.error('[Main] Error getting screen source:', error);
+      return null;
+    }
+  });
+
   ipcMain.handle('get-audio-sources', async () => {
     try {
       const sources = await desktopCapturer.getSources({

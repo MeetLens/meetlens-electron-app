@@ -21,6 +21,15 @@ export class AudioCaptureService {
     onError?: (error: Error) => void
   ): Promise<boolean> {
     try {
+      // Request screen recording permission on macOS
+      if (window.electronAPI?.checkScreenPermission) {
+        const hasPermission = await window.electronAPI.checkScreenPermission();
+        if (!hasPermission) {
+          throw new Error('Screen recording permission denied. Please grant permission in System Settings > Privacy & Security > Screen Recording');
+        }
+        console.log('✓ Screen recording permission granted');
+      }
+
       // Use higher sample rate for better quality
       this.audioContext = new AudioContext();
       console.log(
@@ -140,36 +149,7 @@ export class AudioCaptureService {
   }
 
   private async captureSystemAudio() {
-    // Prefer the official display media loopback path
-    try {
-      const displayStream = await navigator.mediaDevices.getDisplayMedia({
-        audio: true,
-        video: { width: 1, height: 1, frameRate: 1 },
-      });
-
-      const audioTracks = displayStream.getAudioTracks();
-      console.log('Display media stream audio tracks:', audioTracks.length);
-      if (audioTracks.length > 0) {
-        this.systemStream = new MediaStream(audioTracks);
-        console.log('✓ System audio captured via display media');
-        const systemTrack = audioTracks[0];
-        if (systemTrack) {
-          console.log('[AudioCapture] System track settings:', systemTrack.getSettings());
-        }
-      } else {
-        console.warn('Display media stream had no audio tracks, falling back to desktopCapturer');
-      }
-
-      // Stop the video track immediately; we only need audio
-      displayStream.getVideoTracks().forEach((track) => track.stop());
-      if (this.systemStream) {
-        return;
-      }
-    } catch (err) {
-      console.warn('Display media capture failed, falling back:', err);
-    }
-
-    // Fallback: legacy desktopCapturer path
+    // Fallback to legacy desktopCapturer path
     const sources = await window.electronAPI.getAudioSources();
     console.log('Available audio sources:', sources.length);
 
@@ -221,7 +201,7 @@ export class AudioCaptureService {
 
       if (audioTracks.length > 0) {
         this.systemStream = new MediaStream(audioTracks);
-        console.log('✓ System audio captured successfully (fallback)');
+        console.log('✓ System audio captured successfully');
         const systemTrack = audioTracks[0];
         if (systemTrack) {
           console.log('[AudioCapture] System track settings:', systemTrack.getSettings());
@@ -233,7 +213,7 @@ export class AudioCaptureService {
       // Stop video tracks as we only need audio
       systemStreamRaw.getVideoTracks().forEach((track) => track.stop());
     } catch (err) {
-      console.warn('System audio capture failed (fallback):', err);
+      console.warn('System audio capture failed:', err);
     }
   }
 

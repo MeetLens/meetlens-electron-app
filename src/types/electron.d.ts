@@ -24,6 +24,9 @@ export interface AudioSource {
 declare global {
   interface Window {
     electronAPI: {
+      checkScreenPermission: () => Promise<boolean>;
+      openScreenRecordingSettings: () => Promise<boolean>;
+      getScreenSourceId: () => Promise<{ id: string; name: string } | null>;
       getAudioSources: () => Promise<AudioSource[]>;
       createMeeting: (name: string) => Promise<Meeting>;
       getMeetings: () => Promise<Meeting[]>;

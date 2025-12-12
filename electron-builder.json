@@ -1,0 +1,65 @@
+{
+  "appId": "com.meetlens.app",
+  "productName": "MeetLens",
+  "directories": {
+    "output": "release",
+    "buildResources": "build"
+  },
+  "files": [
+    "dist/main.js",
+    "dist/preload.js",
+    "dist/renderer/**/*",
+    "node_modules/**/*",
+    "package.json"
+  ],
+  "extraResources": [
+    {
+      "from": "node_modules/better-sqlite3",
+      "to": "better-sqlite3",
+      "filter": ["**/*"]
+    }
+  ],
+  "mac": {
+    "category": "public.app-category.productivity",
+    "target": [
+      {
+        "target": "dmg",
+        "arch": ["x64", "arm64"]
+      }
+    ],
+    "icon": "build/icon.png",
+    "identity": null,
+    "hardenedRuntime": true,
+    "gatekeeperAssess": false,
+    "entitlements": "build/entitlements.mac.plist",
+    "entitlementsInherit": "build/entitlements.mac.plist",
+    "extendInfo": {
+      "NSMicrophoneUsageDescription": "MeetLens needs access to your microphone to transcribe meeting audio.",
+      "NSCameraUsageDescription": "MeetLens needs access to your camera for video meetings.",
+      "NSScreenCaptureUsageDescription": "MeetLens needs access to screen recording to capture system audio from meetings.",
+      "NSSupportsAutomaticGraphicsSwitching": true
+    }
+  },
+  "dmg": {
+    "title": "${productName} ${version}",
+    "icon": "build/icon.png",
+    "background": null,
+    "contents": [
+      {
+        "x": 130,
+        "y": 220
+      },
+      {
+        "x": 410,
+        "y": 220,
+        "type": "link",
+        "path": "/Applications"
+      }
+    ],
+    "window": {
+      "width": 540,
+      "height": 380
+    }
+  },
+  "publish": null
+}

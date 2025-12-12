@@ -22,6 +22,9 @@ export const registerPreloadApi = (
   ipc: Pick<typeof ipcRenderer, 'invoke'>
 ) => {
   bridge.exposeInMainWorld('electronAPI', {
+    checkScreenPermission: () => ipc.invoke('check-screen-permission'),
+    openScreenRecordingSettings: () => ipc.invoke('open-screen-recording-settings'),
+    getScreenSourceId: () => ipc.invoke('get-screen-source-id'),
     getAudioSources: () => ipc.invoke('get-audio-sources'),
     createMeeting: (name: string) => ipc.invoke('create-meeting', name),
     getMeetings: () => ipc.invoke('get-meetings'),
