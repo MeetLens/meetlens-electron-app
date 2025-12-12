@@ -13,6 +13,7 @@
     "build:electron": "tsc -p tsconfig.main.json",
     "package": "npm run build && electron-builder --mac --config electron-builder.json",
     "package:dir": "npm run build && electron-builder --mac --dir --config electron-builder.json",
+    "release": "npm run package && gh release create v$npm_package_version release/MeetLens-*.dmg --title \"MeetLens v$npm_package_version\" --notes-file RELEASE_NOTES.md",
     "postinstall": "electron-builder install-app-deps",
     "test": "vitest",
     "test:watch": "vitest --watch",
