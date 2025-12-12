@@ -501,9 +501,24 @@ function App() {
         (_audioBlob) => {
           // Audio data is handled by MediaRecorder in the transcription service
         },
-        (error) => {
+        async (error) => {
           console.error('Audio capture error:', error);
-          alert('Error capturing audio. Please check your microphone permissions.');
+
+          // Show helpful error message with option to open settings
+          const errorMessage = error.message || 'Unknown error';
+          const openSettings = window.confirm(
+            `Error capturing audio: ${errorMessage}\n\n` +
+            `MeetLens needs Screen Recording permission to capture system audio.\n\n` +
+            `Click OK to open System Settings, then:\n` +
+            `1. Enable MeetLens in "Screen Recording"\n` +
+            `2. Restart MeetLens\n\n` +
+            `Click Cancel to continue with microphone-only mode.`
+          );
+
+          if (openSettings && window.electronAPI?.openScreenRecordingSettings) {
+            await window.electronAPI.openScreenRecordingSettings();
+          }
+
           stopRecording();
         }
       );

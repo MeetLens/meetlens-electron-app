@@ -29,7 +29,10 @@
     "meetings",
     "speech-to-text"
   ],
-  "author": "MeetLens",
+  "author": {
+    "name": "MeetLens",
+    "email": "askinkadir@cekim.eu"
+  },
   "license": "MIT",
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
