@@ -115,12 +115,15 @@ describe('electron main process helpers', () => {
     expect(electronMocks.openDevToolsMock).not.toHaveBeenCalled();
   });
 
-  it('registers IPC handlers for meeting and translation operations', () => {
+  it('registers IPC handlers for meeting operations', () => {
     const database = createDatabase();
 
     registerIpcHandlers(database);
 
     const expectedChannels = [
+      'open-screen-recording-settings',
+      'check-screen-permission',
+      'get-screen-source-id',
       'get-audio-sources',
       'create-meeting',
       'get-meetings',
@@ -131,7 +134,6 @@ describe('electron main process helpers', () => {
       'delete-meeting',
       'save-meeting-summary',
       'get-meeting-summary',
-      'translate-text',
     ];
 
     const handleCalls = electronMocks.ipcMainMock.handle.mock

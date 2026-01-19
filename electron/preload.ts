@@ -37,8 +37,6 @@ export const registerPreloadApi = (
     saveMeetingSummary: (meetingId: number, summary: string, fullTranscript: string) =>
       ipc.invoke('save-meeting-summary', meetingId, summary, fullTranscript),
     getMeetingSummary: (meetingId: number) => ipc.invoke('get-meeting-summary', meetingId),
-    translateText: (text: string, targetLang: string, apiKey: string) =>
-      ipc.invoke('translate-text', text, targetLang, apiKey),
   });
 };
 

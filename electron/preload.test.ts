@@ -22,6 +22,7 @@ describe('registerPreloadApi', () => {
     expect(mockExposeInMainWorld).toHaveBeenCalledWith('electronAPI', expect.any(Object));
     expect(apiKeys).toEqual(
       [
+        'checkScreenPermission',
         'clearTranscripts',
         'createMeeting',
         'deleteMeeting',
@@ -29,20 +30,23 @@ describe('registerPreloadApi', () => {
         'getMeeting',
         'getMeetingSummary',
         'getMeetings',
+        'getScreenSourceId',
         'getTranscripts',
+        'openScreenRecordingSettings',
         'saveMeetingSummary',
         'saveTranscript',
-        'translateText',
       ].sort()
     );
   });
 
   it.each([
+    ['checkScreenPermission', [], ['check-screen-permission']],
     ['getAudioSources', [], ['get-audio-sources']],
     ['createMeeting', ['New Meeting'], ['create-meeting', 'New Meeting']],
     ['getMeetings', [], ['get-meetings']],
     ['getMeeting', [3], ['get-meeting', 3]],
     ['saveTranscript', [2, '00:01', 'Hello', 'Hola'], ['save-transcript', 2, '00:01', 'Hello', 'Hola']],
+    ['getScreenSourceId', [], ['get-screen-source-id']],
     ['getTranscripts', [5], ['get-transcripts', 5]],
     ['clearTranscripts', [8], ['clear-transcripts', 8]],
     ['deleteMeeting', [1], ['delete-meeting', 1]],
@@ -52,7 +56,7 @@ describe('registerPreloadApi', () => {
       ['save-meeting-summary', 4, 'Summary', 'Full transcript'],
     ],
     ['getMeetingSummary', [6], ['get-meeting-summary', 6]],
-    ['translateText', ['text', 'es', 'api-key'], ['translate-text', 'text', 'es', 'api-key']],
+    ['openScreenRecordingSettings', [], ['open-screen-recording-settings']],
   ])('routes %s to ipcRenderer.invoke', (
     methodName: string,
     args: unknown[],

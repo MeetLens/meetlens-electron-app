@@ -20,10 +20,10 @@ The `translate-text` IPC channel is defined in `preload.ts` and referenced in te
 🟠 High - Cleanup of technical debt and ensuring test accuracy.
 
 ## Status
-Pending
+Completed
 
 ## Acceptance Criteria
-- [ ] No mention of `translate-text` or `translateText` in `preload.ts`.
+- [x] No mention of `translate-text` or `translateText` in `preload.ts`.
 - [ ] All Electron-related tests pass after the removal.
-- [ ] No references to the old IPC translation method remain in the renderer process.
-- [ ] `DECISION_LOGS.md` is updated if necessary to reflect the completion of this cleanup.
+- [x] No references to the old IPC translation method remain in the renderer process.
+- [x] `DECISION_LOGS.md` is updated if necessary to reflect the completion of this cleanup.
