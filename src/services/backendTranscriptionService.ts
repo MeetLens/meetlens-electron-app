@@ -1,4 +1,5 @@
 import { AUDIO_SAMPLE_RATE, TRANSCRIPTION_WS_URL } from '../config';
+import { WebSocketConnectionManager, ConnectionCallbacks } from './webSocketConnectionManager';
 
 // Backend WebSocket service for real-time transcription and translation
 export interface AudioChunkMessage {
@@ -59,6 +60,7 @@ type ServerMessage =
 const BACKEND_AUDIO_FORMAT = 'pcm_s16le_16k_mono';
 
 export class BackendTranscriptionService {
+  private connectionManager: WebSocketConnectionManager;
   private ws: WebSocket | null = null;
   private sessionId: string;
   private wsUrl: string;
@@ -66,6 +68,10 @@ export class BackendTranscriptionService {
   private audioContext: AudioContext | null = null;
   private workletNode: AudioWorkletNode | null = null;
   private isRecording = false;
+  private connectionState = false;
+  private partialTranscriptDebounceTimer: NodeJS.Timeout | null = null;
+  private memoryMonitoringInterval: ReturnType<typeof setInterval> | null = null;
+  private transcriptionStartTime: number = 0;
 
   // Callbacks
   private onTranscriptPartialCallback:
@@ -86,10 +92,11 @@ export class BackendTranscriptionService {
   constructor(sessionId: string, wsUrl: string = TRANSCRIPTION_WS_URL) {
     this.sessionId = sessionId;
     this.wsUrl = wsUrl;
+    this.connectionManager = WebSocketConnectionManager.getInstance();
   }
 
   /**
-   * Connect to backend WebSocket and set up message handlers
+   * Connect to backend WebSocket using connection manager
    */
   async connect(
     onTranscriptPartial: (text: string, sessionId: string) => void | Promise<void>,
@@ -103,56 +110,69 @@ export class BackendTranscriptionService {
     onConnection: (connected: boolean) => void,
     onError: (error: string) => void
   ): Promise<boolean> {
-    return new Promise((resolve, reject) => {
-      try {
-        this.onTranscriptPartialCallback = onTranscriptPartial;
-        this.onTranscriptStableCallback = onTranscriptStable;
-        this.onTranslationPartialCallback = onTranslationPartial;
-        this.onTranslationStableCallback = onTranslationStable;
-        this.onConnectionCallback = onConnection;
-        this.onErrorCallback = onError;
+    try {
+      // Store callbacks
+      this.onTranscriptPartialCallback = onTranscriptPartial;
+      this.onTranscriptStableCallback = onTranscriptStable;
+      this.onTranslationPartialCallback = onTranslationPartial;
+      this.onTranslationStableCallback = onTranslationStable;
+      this.onConnectionCallback = onConnection;
+      this.onErrorCallback = onError;
 
-        this.ws = new WebSocket(this.wsUrl);
-
-        this.ws.onopen = () => {
-          console.log('Backend WebSocket connected');
-          if (this.onConnectionCallback) {
-            this.onConnectionCallback(true);
-          }
-          resolve(true);
-        };
-
-        this.ws.onmessage = (event) => {
+      // Define connection callbacks for the manager
+      const connectionCallbacks: ConnectionCallbacks = {
+        onMessage: (event) => {
           try {
             const message: ServerMessage = JSON.parse(event.data);
             this.handleServerMessage(message);
           } catch (error) {
             console.error('Failed to parse server message:', error);
           }
-        };
-
-        this.ws.onerror = (error) => {
-          console.error('WebSocket error:', error);
+        },
+        onError: (event) => {
+          console.error('WebSocket error:', event);
+          this.connectionState = false;
           if (this.onErrorCallback) {
             this.onErrorCallback('WebSocket connection error');
           }
           if (this.onConnectionCallback) {
             this.onConnectionCallback(false);
           }
-          reject(error);
-        };
-
-        this.ws.onclose = () => {
+        },
+        onClose: (event) => {
           console.log('Backend WebSocket disconnected');
+          this.connectionState = false;
           if (this.onConnectionCallback) {
             this.onConnectionCallback(false);
           }
-        };
-      } catch (error) {
-        console.error('Failed to create WebSocket:', error);
-        reject(error);
+        },
+        onOpen: (event) => {
+          console.log('Backend WebSocket connected');
+          this.connectionState = true;
+          if (this.onConnectionCallback) {
+            this.onConnectionCallback(true);
+          }
+        },
+      };
+
+      // Acquire connection from manager
+      this.ws = await this.connectionManager.acquireConnection(
+        this.sessionId,
+        connectionCallbacks,
+        this.wsUrl
+      );
+
+      return true;
+    } catch (error) {
+      console.error('Failed to acquire WebSocket connection:', error);
+      if (this.onErrorCallback) {
+        this.onErrorCallback(`Connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
-    });
+      if (this.onConnectionCallback) {
+        this.onConnectionCallback(false);
+      }
+      throw error;
+    }
   }
 
   /**
@@ -177,13 +197,27 @@ export class BackendTranscriptionService {
         console.log('🔄 Partial transcript:', message.text);
         // Only update if text has changed to avoid unnecessary re-renders
         if (this.onTranscriptPartialCallback && message.text && message.text.trim()) {
-          this.onTranscriptPartialCallback(message.text, message.session_id);
+          // Debounce partial transcript updates to reduce UI flickering (150ms)
+          if (this.partialTranscriptDebounceTimer) {
+            clearTimeout(this.partialTranscriptDebounceTimer);
+          }
+          this.partialTranscriptDebounceTimer = setTimeout(() => {
+            this.onTranscriptPartialCallback!(message.text, message.session_id);
+            this.partialTranscriptDebounceTimer = null;
+          }, 150);
         }
         break;
 
       case 'transcript_stable':
-        // Send stable transcripts to UI
+        // Send stable transcripts to UI immediately (bypass debouncing)
         console.log('✅ Stable transcript:', message.text || message.full_text);
+
+        // Clear any pending debounced partial transcript update
+        if (this.partialTranscriptDebounceTimer) {
+          clearTimeout(this.partialTranscriptDebounceTimer);
+          this.partialTranscriptDebounceTimer = null;
+        }
+
         if (
           this.onTranscriptStableCallback &&
           (message.text?.trim() || message.full_text?.trim())
@@ -253,6 +287,7 @@ export class BackendTranscriptionService {
       console.log('[BackendTranscription] Declared backend audio_format:', BACKEND_AUDIO_FORMAT);
       // Mark recording early so we can attempt resumes on state change
       this.isRecording = true;
+      this.startMemoryMonitoring();
       this.audioContext.onstatechange = () => {
         const state = this.audioContext?.state;
         console.log('[BackendTranscription] AudioContext state changed:', state);
@@ -354,18 +389,38 @@ export class BackendTranscriptionService {
    */
   async disconnect() {
     try {
+      // Clear any pending debounced updates
+      if (this.partialTranscriptDebounceTimer) {
+        clearTimeout(this.partialTranscriptDebounceTimer);
+        this.partialTranscriptDebounceTimer = null;
+      }
+
+      console.log('[BackendTranscription] Starting resource cleanup');
+
+      // Stop memory monitoring
+      this.stopMemoryMonitoring();
+
       // Stop audio processing
       if (this.audioContext) {
         if (this.workletNode) {
           try {
             this.workletNode.port.onmessage = null;
             this.workletNode.disconnect();
+            console.log('[BackendTranscription] Worklet node disconnected');
           } catch (err) {
             console.warn('[BackendTranscription] Failed to disconnect worklet node:', err);
           }
           this.workletNode = null;
         }
-        await this.audioContext.close();
+
+        if (this.audioContext.state !== 'closed') {
+          try {
+            await this.audioContext.close();
+            console.log('[BackendTranscription] AudioContext closed');
+          } catch (err) {
+            console.warn('[BackendTranscription] Failed to close AudioContext:', err);
+          }
+        }
         this.audioContext = null;
         this.isRecording = false;
       }
@@ -382,11 +437,10 @@ export class BackendTranscriptionService {
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
 
-      // Close WebSocket
-      if (this.ws) {
-        this.ws.close();
-        this.ws = null;
-      }
+      // Release connection back to pool (keep warm for potential reuse)
+      this.connectionManager.releaseConnection(this.sessionId, true);
+      this.ws = null;
+      this.connectionState = false;
 
       console.log('Backend WebSocket disconnected');
     } catch (error) {
@@ -398,6 +452,36 @@ export class BackendTranscriptionService {
    * Check if connected
    */
   isConnected(): boolean {
-    return this.ws?.readyState === WebSocket.OPEN;
+    return this.connectionState && this.connectionManager.isConnectionHealthy(this.sessionId);
+  }
+
+  private logMemoryUsage(context: string) {
+    if ('memory' in performance) {
+      const mem = (performance as any).memory;
+      const usedMB = (mem.usedJSHeapSize / 1024 / 1024).toFixed(2);
+      const totalMB = (mem.totalJSHeapSize / 1024 / 1024).toFixed(2);
+      const limitMB = (mem.jsHeapSizeLimit / 1024 / 1024).toFixed(2);
+      console.log(`[BackendTranscription] ${context} - Memory: ${usedMB}MB used, ${totalMB}MB total, ${limitMB}MB limit`);
+    }
+  }
+
+  private startMemoryMonitoring() {
+    this.transcriptionStartTime = performance.now();
+    this.logMemoryUsage('Transcription started');
+
+    // Monitor memory usage every 30 seconds during transcription
+    this.memoryMonitoringInterval = setInterval(() => {
+      const elapsedMinutes = ((performance.now() - this.transcriptionStartTime) / 1000 / 60).toFixed(1);
+      this.logMemoryUsage(`Transcription ${elapsedMinutes}min`);
+    }, 30000);
+  }
+
+  private stopMemoryMonitoring() {
+    if (this.memoryMonitoringInterval) {
+      clearInterval(this.memoryMonitoringInterval);
+      this.memoryMonitoringInterval = null;
+      const totalMinutes = ((performance.now() - this.transcriptionStartTime) / 1000 / 60).toFixed(1);
+      this.logMemoryUsage(`Transcription ended (${totalMinutes}min total)`);
+    }
   }
 }

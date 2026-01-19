@@ -15,6 +15,22 @@ export class AudioCaptureService {
   private combinedStream: MediaStream | null = null;
   private activeApps: ActiveApp[] = [];
   private appTrackingInterval: ReturnType<typeof setInterval> | null = null;
+  private workletNodes: AudioWorkletNode[] = [];
+  private memoryMonitoringInterval: ReturnType<typeof setInterval> | null = null;
+  private recordingStartTime: number = 0;
+
+  private getOrCreateAudioContext(): AudioContext {
+    // Reuse existing AudioContext if it's in a good state
+    if (this.audioContext && this.audioContext.state !== 'closed') {
+      console.log('[AudioCapture] Reusing existing AudioContext');
+      return this.audioContext;
+    }
+
+    // Create new AudioContext - browsers typically allow ~6 concurrent contexts
+    console.log('[AudioCapture] Creating new AudioContext');
+    this.audioContext = new AudioContext();
+    return this.audioContext;
+  }
 
   async startCapture(
     onDataAvailable: (audioData: Blob) => void,
@@ -30,8 +46,8 @@ export class AudioCaptureService {
         console.log('✓ Screen recording permission granted');
       }
 
-      // Use higher sample rate for better quality
-      this.audioContext = new AudioContext();
+      // Get or create AudioContext with reuse logic to avoid browser limits
+      this.audioContext = this.getOrCreateAudioContext();
       console.log(
         '[AudioCapture] AudioContext created with state:',
         this.audioContext.state,
@@ -134,8 +150,9 @@ export class AudioCaptureService {
       this.mediaRecorder.start(250);
       this.isRecording = true;
 
-      // Start tracking active apps periodically
+      // Start tracking active apps and memory usage periodically
       this.startAppTracking();
+      this.startMemoryMonitoring();
 
       return true;
     } catch (error) {
@@ -236,28 +253,93 @@ export class AudioCaptureService {
   }
 
   private cleanup() {
+    console.log('[AudioCapture] Starting resource cleanup');
+
+    // Stop memory monitoring
+    this.stopMemoryMonitoring();
+
+    // Clear app tracking interval
     if (this.appTrackingInterval) {
       clearInterval(this.appTrackingInterval);
       this.appTrackingInterval = null;
     }
 
+    // Stop and clean up MediaRecorder
+    if (this.mediaRecorder && this.isRecording) {
+      try {
+        this.mediaRecorder.stop();
+      } catch (err) {
+        console.warn('[AudioCapture] Error stopping MediaRecorder:', err);
+      }
+      this.mediaRecorder = null;
+    }
+
+    // Clean up worklet nodes
+    this.workletNodes.forEach(node => {
+      try {
+        node.port.onmessage = null;
+        node.disconnect();
+      } catch (err) {
+        console.warn('[AudioCapture] Error disconnecting worklet node:', err);
+      }
+    });
+    this.workletNodes = [];
+
+    // Stop system audio tracks
     if (this.systemStream) {
-      this.systemStream.getTracks().forEach((track) => track.stop());
+      try {
+        this.systemStream.getTracks().forEach((track) => {
+          try {
+            track.stop();
+          } catch (err) {
+            console.warn('[AudioCapture] Error stopping system track:', err);
+          }
+        });
+      } catch (err) {
+        console.warn('[AudioCapture] Error cleaning system stream:', err);
+      }
       this.systemStream = null;
     }
 
+    // Stop microphone tracks
     if (this.micStream) {
-      this.micStream.getTracks().forEach((track) => track.stop());
+      try {
+        this.micStream.getTracks().forEach((track) => {
+          try {
+            track.stop();
+          } catch (err) {
+            console.warn('[AudioCapture] Error stopping mic track:', err);
+          }
+        });
+      } catch (err) {
+        console.warn('[AudioCapture] Error cleaning mic stream:', err);
+      }
       this.micStream = null;
     }
 
-    if (this.audioContext) {
-      this.audioContext.close();
-      this.audioContext = null;
+    // Clean up destination node
+    if (this.destination) {
+      try {
+        this.destination.disconnect();
+      } catch (err) {
+        console.warn('[AudioCapture] Error disconnecting destination:', err);
+      }
+      this.destination = null;
     }
 
-    this.destination = null;
-    this.mediaRecorder = null;
+    // Close AudioContext - but don't null it out immediately in case it can be reused
+    // AudioContexts can be expensive to create, so we'll keep a reference but mark as closed
+    if (this.audioContext && this.audioContext.state !== 'closed') {
+      try {
+        this.audioContext.close();
+        console.log('[AudioCapture] AudioContext closed');
+      } catch (err) {
+        console.warn('[AudioCapture] Error closing AudioContext:', err);
+      }
+    }
+
+    this.combinedStream = null;
+    console.log('[AudioCapture] Resource cleanup completed');
   }
 
   getIsRecording(): boolean {
@@ -270,5 +352,35 @@ export class AudioCaptureService {
 
   getActiveApps(): ActiveApp[] {
     return this.activeApps;
+  }
+
+  private logMemoryUsage(context: string) {
+    if ('memory' in performance) {
+      const mem = (performance as any).memory;
+      const usedMB = (mem.usedJSHeapSize / 1024 / 1024).toFixed(2);
+      const totalMB = (mem.totalJSHeapSize / 1024 / 1024).toFixed(2);
+      const limitMB = (mem.jsHeapSizeLimit / 1024 / 1024).toFixed(2);
+      console.log(`[AudioCapture] ${context} - Memory: ${usedMB}MB used, ${totalMB}MB total, ${limitMB}MB limit`);
+    }
+  }
+
+  private startMemoryMonitoring() {
+    this.recordingStartTime = performance.now();
+    this.logMemoryUsage('Recording started');
+
+    // Monitor memory usage every 30 seconds during recording
+    this.memoryMonitoringInterval = setInterval(() => {
+      const elapsedMinutes = ((performance.now() - this.recordingStartTime) / 1000 / 60).toFixed(1);
+      this.logMemoryUsage(`Recording ${elapsedMinutes}min`);
+    }, 30000);
+  }
+
+  private stopMemoryMonitoring() {
+    if (this.memoryMonitoringInterval) {
+      clearInterval(this.memoryMonitoringInterval);
+      this.memoryMonitoringInterval = null;
+      const totalMinutes = ((performance.now() - this.recordingStartTime) / 1000 / 60).toFixed(1);
+      this.logMemoryUsage(`Recording ended (${totalMinutes}min total)`);
+    }
   }
 }

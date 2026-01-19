@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback, Profiler } from 'react';
 import { Meeting, Transcript } from './types/electron';
 import { AudioCaptureService } from './services/audioService';
 import { BackendSummaryService, type SummaryResponse } from './services/backendSummaryService';
 import { BackendTranscriptionService } from './services/backendTranscriptionService';
+import { WebSocketConnectionManager } from './services/webSocketConnectionManager';
 import TopBar from './components/TopBar';
 import Sidebar from './components/Sidebar';
 import SummaryPanel from './components/SummaryPanel';
@@ -39,6 +40,19 @@ function App() {
 
   useEffect(() => {
     loadMeetings();
+
+    // Periodic health check for WebSocket connections
+    const healthCheckInterval = setInterval(() => {
+      const connectionManager = WebSocketConnectionManager.getInstance();
+      connectionManager.performHealthCheck();
+    }, 5 * 60 * 1000); // Every 5 minutes
+
+    // Cleanup WebSocket connections on component unmount
+    return () => {
+      clearInterval(healthCheckInterval);
+      const connectionManager = WebSocketConnectionManager.getInstance();
+      connectionManager.cleanup();
+    };
   }, []);
 
   useEffect(() => {
@@ -82,7 +96,7 @@ function App() {
     setStructuredSummary(null);
   };
 
-  const createNewMeeting = async () => {
+  const createNewMeeting = useCallback(async () => {
     const now = new Date();
     const name = `Meeting ${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
@@ -92,13 +106,13 @@ function App() {
     setTranscripts([]);
     setMeetingSummary('');
     setStructuredSummary(null);
-  };
+  }, [meetings]);
 
-  const selectMeeting = (meeting: Meeting) => {
+  const selectMeeting = useCallback((meeting: Meeting) => {
     setCurrentMeeting(meeting);
-  };
+  }, []);
 
-  const deleteMeeting = async (meetingId: number) => {
+  const deleteMeeting = useCallback(async (meetingId: number) => {
     await window.electronAPI.deleteMeeting(meetingId);
     await loadMeetings();
 
@@ -110,16 +124,16 @@ function App() {
       setMeetingSummary('');
       setStructuredSummary(null);
     }
-  };
+  }, [currentMeeting, meetings]);
 
-  const clearTranscripts = async () => {
+  const clearTranscripts = useCallback(async () => {
     if (!currentMeeting) return;
 
     await window.electronAPI.clearTranscripts(currentMeeting.id);
     setTranscripts([]);
     setMeetingSummary('');
     setStructuredSummary(null);
-  };
+  }, [currentMeeting]);
 
   const formatTimestamp = (): string => {
     const now = new Date();
@@ -333,7 +347,7 @@ function App() {
     updateTranscriptTranslationForSession(sessionId, stableTranslationRef.current);
   };
 
-  const generateMeetingSummary = async () => {
+  const generateMeetingSummary = useCallback(async () => {
     if (!currentMeeting) {
       alert('No meeting selected');
       return;
@@ -379,7 +393,7 @@ function App() {
     } finally {
       setIsGeneratingSummary(false);
     }
-  };
+  }, [currentMeeting, transcripts, selectedLanguage]);
 
   const startRecording = async () => {
     // Ensure we have a meeting before starting
@@ -563,51 +577,97 @@ function App() {
     }
   };
 
+  // Memoized callback for start/stop recording
+  const handleStartStop = useCallback(() => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  }, [isRecording]);
+
+  // Memoize transcript processing to avoid re-computation on every render
+  const processedTranscripts = useMemo(() => {
+    return transcripts.map((entry, index) => {
+      const isActiveSessionBubble =
+        isRecording && entry.sessionId === currentSessionIdRef.current;
+      const showTranslation =
+        entry.translation ||
+        (isActiveSessionBubble && (stableTranslation || partialTranslation));
+
+      return {
+        ...entry,
+        isActiveSessionBubble,
+        showTranslation,
+        index,
+      };
+    });
+  }, [transcripts, isRecording, stableTranslation, partialTranslation]);
+
+  // Performance profiling callback for React DevTools
+  const onRenderCallback = (
+    id: string,
+    phase: 'mount' | 'update',
+    actualDuration: number,
+    baseDuration: number,
+    startTime: number,
+    commitTime: number
+  ) => {
+    if (actualDuration > 16.67) { // Log renders that exceed 60fps threshold
+      console.log(`🔄 ${id} [${phase}]: ${actualDuration.toFixed(2)}ms (base: ${baseDuration.toFixed(2)}ms)`);
+    }
+  };
+
   return (
     <div className="app-container">
-      <TopBar
-        isRecording={isRecording}
-        isConnected={isConnected}
-        onStartStop={isRecording ? stopRecording : startRecording}
-        selectedLanguage={selectedLanguage}
-        onLanguageChange={setSelectedLanguage}
-      />
+      <Profiler id="TopBar" onRender={onRenderCallback}>
+        <TopBar
+          isRecording={isRecording}
+          isConnected={isConnected}
+          onStartStop={handleStartStop}
+          selectedLanguage={selectedLanguage}
+          onLanguageChange={setSelectedLanguage}
+        />
+      </Profiler>
 
       <div className="main-content">
-        <Sidebar
-          meetings={meetings}
-          currentMeeting={currentMeeting}
-          onSelectMeeting={selectMeeting}
-          onNewMeeting={createNewMeeting}
-          onDeleteMeeting={deleteMeeting}
-        />
+        <Profiler id="Sidebar" onRender={onRenderCallback}>
+          <Sidebar
+            meetings={meetings}
+            currentMeeting={currentMeeting}
+            onSelectMeeting={selectMeeting}
+            onNewMeeting={createNewMeeting}
+            onDeleteMeeting={deleteMeeting}
+          />
+        </Profiler>
 
-        <div className="center-panel">
-          <div className="panel-header">
-            <h2 className="panel-title">Live Transcript</h2>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              <button
-                className="record-button start"
-                onClick={generateMeetingSummary}
-                disabled={!transcripts.length || isGeneratingSummary}
-                style={{
-                  padding: '6px 14px',
-                  fontSize: '12px',
-                  opacity: !transcripts.length || isGeneratingSummary ? 0.5 : 1,
-                  cursor: !transcripts.length || isGeneratingSummary ? 'not-allowed' : 'pointer',
-                  borderRadius: '8px',
-                }}
-              >
-                {isGeneratingSummary ? 'Generating...' : 'AI Summary'}
-              </button>
-              <button className="clear-button" onClick={clearTranscripts}>
-                Clear
-              </button>
+        <Profiler id="CenterPanel" onRender={onRenderCallback}>
+          <div className="center-panel">
+            <div className="panel-header">
+              <h2 className="panel-title">Live Transcript</h2>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <button
+                  className="record-button start"
+                  onClick={generateMeetingSummary}
+                  disabled={!processedTranscripts.length || isGeneratingSummary}
+                  style={{
+                    padding: '6px 14px',
+                    fontSize: '12px',
+                    opacity: !processedTranscripts.length || isGeneratingSummary ? 0.5 : 1,
+                    cursor: !processedTranscripts.length || isGeneratingSummary ? 'not-allowed' : 'pointer',
+                    borderRadius: '8px',
+                  }}
+                >
+                  {isGeneratingSummary ? 'Generating...' : 'AI Summary'}
+                </button>
+                <button className="clear-button" onClick={clearTranscripts}>
+                  Clear
+                </button>
+              </div>
             </div>
-          </div>
 
-          <div className="transcript-container" ref={transcriptContainerRef}>
-            {transcripts.length === 0 ? (
+            <div className="transcript-container" ref={transcriptContainerRef}>
+            {processedTranscripts.length === 0 ? (
               <div className="empty-state">
                 <svg width="64" height="64" viewBox="0 0 24 24" fill="none" style={{ opacity: 0.3 }}>
                   <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -651,38 +711,32 @@ function App() {
               </div>
             ) : (
               <>
-                {transcripts.map((entry, index) => {
-                  const isActiveSessionBubble =
-                    isRecording && entry.sessionId === currentSessionIdRef.current;
-                  const showTranslation =
-                    entry.translation ||
-                    (isActiveSessionBubble && (stableTranslation || partialTranslation));
-
+                {processedTranscripts.map((entry) => {
                   return (
                     <div
-                      key={(entry as any).sessionId || index}
+                      key={(entry as any).sessionId || entry.index}
                       className="transcript-entry"
                       style={{
-                        animation: index === transcripts.length - 1 ? 'slideIn 0.3s ease-out' : 'none'
+                        animation: entry.index === processedTranscripts.length - 1 ? 'slideIn 0.3s ease-out' : 'none'
                       }}
                     >
                       <div className="transcript-timestamp">{entry.timestamp}</div>
                       <div className="transcript-text">
                         {entry.text}
-                        {isActiveSessionBubble && partialTranscript && (
+                        {entry.isActiveSessionBubble && partialTranscript && (
                           <span style={{ color: '#9aa0a6', fontStyle: 'italic' }}>
                             {entry.text ? ' ' : ''}
                             {partialTranscript}
                           </span>
                         )}
                       </div>
-                      {showTranslation && (
+                      {entry.showTranslation && (
                         <div className="transcript-translation" style={{
                           marginTop: '8px',
                           color: '#10a37f',
                           fontSize: '13px'
                         }}>
-                          {isActiveSessionBubble ? (
+                          {entry.isActiveSessionBubble ? (
                             <>
                               {(stableTranslation || (!partialTranslation && entry.translation)) && (
                                 <span style={{ color: '#111111', fontStyle: 'normal' }}>
@@ -727,14 +781,17 @@ function App() {
             )}
           </div>
         </div>
+        </Profiler>
 
-        <SummaryPanel
-          summary={meetingSummary}
-          structuredSummary={structuredSummary}
-          isGenerating={isGeneratingSummary}
-          onGenerate={generateMeetingSummary}
-          hasTranscripts={transcripts.length > 0}
-        />
+        <Profiler id="SummaryPanel" onRender={onRenderCallback}>
+          <SummaryPanel
+            summary={meetingSummary}
+            structuredSummary={structuredSummary}
+            isGenerating={isGeneratingSummary}
+            onGenerate={generateMeetingSummary}
+            hasTranscripts={processedTranscripts.length > 0}
+          />
+        </Profiler>
       </div>
     </div>
   );

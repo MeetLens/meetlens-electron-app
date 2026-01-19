@@ -10,6 +10,11 @@ class PCMWorkletProcessor extends AudioWorkletProcessor {
     this.sourceFramesPerChunk = Math.round(
       this.chunkLength * (this.sourceSampleRate / this.targetSampleRate)
     );
+    // Memory management: limit buffer to prevent unbounded growth
+    // Allow 10x the chunk size for reasonable buffering but prevent memory leaks
+    this.maxBufferSize = this.sourceFramesPerChunk * 10;
+    this.overflowCount = 0;
+    this.processedChunks = 0;
   }
 
   process(inputs, outputs) {
@@ -35,6 +40,17 @@ class PCMWorkletProcessor extends AudioWorkletProcessor {
       }
     }
 
+    // Memory management: prevent buffer overflow
+    if (this.buffer.length > this.maxBufferSize) {
+      // Drop oldest samples to make room for new data
+      const excessSamples = this.buffer.length - this.maxBufferSize;
+      this.buffer = this.buffer.slice(excessSamples);
+      this.overflowCount++;
+      if (this.overflowCount <= 3 || this.overflowCount % 100 === 0) {
+        console.warn(`[PCMWorklet] Buffer overflow prevented. Dropped ${excessSamples} samples. Total overflows: ${this.overflowCount}`);
+      }
+    }
+
     while (this.buffer.length >= this.sourceFramesPerChunk) {
       const block = this.buffer.slice(0, this.sourceFramesPerChunk);
       this.buffer = this.buffer.slice(this.sourceFramesPerChunk);
@@ -52,6 +68,13 @@ class PCMWorkletProcessor extends AudioWorkletProcessor {
         },
         [pcm16.buffer]
       );
+
+      this.processedChunks++;
+      // Periodic memory monitoring
+      if (this.processedChunks % 100 === 0) {
+        const bufferSizeKB = (this.buffer.length * 4) / 1024; // Float32 = 4 bytes per sample
+        console.log(`[PCMWorklet] Memory stats - Buffer: ${this.buffer.length} samples (${bufferSizeKB.toFixed(1)}KB), Max: ${this.maxBufferSize} samples, Chunks: ${this.processedChunks}`);
+      }
     }
 
     return true;

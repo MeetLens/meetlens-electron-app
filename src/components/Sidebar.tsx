@@ -1,4 +1,5 @@
 import { Meeting } from '../types/electron';
+import { memo } from 'react';
 
 interface SidebarProps {
   meetings: Meeting[];
@@ -80,4 +81,4 @@ function Sidebar({ meetings, currentMeeting, onSelectMeeting, onNewMeeting, onDe
   );
 }
 
-export default Sidebar;
+export default memo(Sidebar);

@@ -1,4 +1,5 @@
 import { SummaryResponse } from '../services/backendSummaryService';
+import { memo } from 'react';
 
 interface SummaryPanelProps {
   summary: string;
@@ -156,4 +157,4 @@ function SummaryPanel({ summary, structuredSummary, isGenerating, onGenerate, ha
   );
 }
 
-export default SummaryPanel;
+export default memo(SummaryPanel);

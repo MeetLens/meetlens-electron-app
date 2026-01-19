@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 
 interface TopBarProps {
   isRecording: boolean;
@@ -133,4 +133,4 @@ function TopBar({
   );
 }
 
-export default TopBar;
+export default memo(TopBar);
