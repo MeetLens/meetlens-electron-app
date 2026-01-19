@@ -506,7 +506,19 @@ function App() {
   const stopRecording = async () => {
     const sessionId = currentSessionIdRef.current;
 
-    // Save the current session's transcript to database BEFORE stopping
+    // Stop audio capture first
+    if (audioServiceRef.current) {
+      audioServiceRef.current.stopCapture();
+      audioServiceRef.current = null;
+    }
+
+    // Disconnect backend transcription service (waits for final messages)
+    if (backendTranscriptionServiceRef.current) {
+      await backendTranscriptionServiceRef.current.disconnect();
+      backendTranscriptionServiceRef.current = null;
+    }
+
+    // Save the session's transcript to database AFTER disconnect (to include any final messages)
     if (currentMeeting && sessionId) {
       // Find the bubble for this session
       const sessionBubble = transcripts.find((t) => t.sessionId === sessionId);
@@ -544,18 +556,6 @@ function App() {
           translationToPersist
         );
       }
-    }
-
-    // Stop audio capture
-    if (audioServiceRef.current) {
-      audioServiceRef.current.stopCapture();
-      audioServiceRef.current = null;
-    }
-
-    // Disconnect backend transcription service
-    if (backendTranscriptionServiceRef.current) {
-      await backendTranscriptionServiceRef.current.disconnect();
-      backendTranscriptionServiceRef.current = null;
     }
 
     setIsRecording(false);

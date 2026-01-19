@@ -385,7 +385,7 @@ export class BackendTranscriptionService {
   }
 
   /**
-   * Disconnect and clean up
+   * Disconnect and clean up, waiting for final messages from backend
    */
   async disconnect() {
     try {
@@ -425,7 +425,7 @@ export class BackendTranscriptionService {
         this.isRecording = false;
       }
 
-      // Send end_session message
+      // Send end_session message and wait for final messages
       if (this.ws?.readyState === WebSocket.OPEN) {
         const message: EndSessionMessage = {
           type: 'end_session',
@@ -433,8 +433,45 @@ export class BackendTranscriptionService {
         };
         this.ws.send(JSON.stringify(message));
 
-        // Wait a bit for the message to be sent
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        // Wait for final messages from backend (up to 1 second)
+        // The backend may send final transcript_stable messages with buffer_unstable content
+        console.log('[BackendTranscription] Waiting for final messages from backend...');
+        await new Promise<void>((resolve) => {
+          let messageReceived = false;
+          const timeout = setTimeout(() => {
+            if (!messageReceived) {
+              console.log('[BackendTranscription] Timeout waiting for final messages, proceeding with disconnect');
+              resolve();
+            }
+          }, 1000);
+
+          // Listen for final messages
+          const originalOnMessage = this.ws.onmessage;
+          this.ws.onmessage = (event) => {
+            try {
+              const message: ServerMessage = JSON.parse(event.data);
+              if (message.type === 'transcript_stable' || message.type === 'error') {
+                console.log('[BackendTranscription] Received final message:', message.type);
+                messageReceived = true;
+                clearTimeout(timeout);
+                // Restore original handler and call it
+                this.ws!.onmessage = originalOnMessage;
+                if (originalOnMessage) {
+                  originalOnMessage.call(this.ws, event);
+                }
+                resolve();
+              } else if (originalOnMessage) {
+                // Call original handler for other messages
+                originalOnMessage.call(this.ws, event);
+              }
+            } catch (error) {
+              console.warn('[BackendTranscription] Error parsing final message:', error);
+              if (originalOnMessage) {
+                originalOnMessage.call(this.ws, event);
+              }
+            }
+          };
+        });
       }
 
       // Release connection back to pool (keep warm for potential reuse)
@@ -442,7 +479,7 @@ export class BackendTranscriptionService {
       this.ws = null;
       this.connectionState = false;
 
-      console.log('Backend WebSocket disconnected');
+      console.log('[BackendTranscription] Backend WebSocket disconnected');
     } catch (error) {
       console.error('Error disconnecting:', error);
     }
