@@ -311,6 +311,23 @@ input, select, textarea {
   color: var(--text-primary);
 }
 
+.panel-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.summary-button {
+  padding: 6px 14px;
+  font-size: 12px;
+  border-radius: 8px;
+}
+
+.summary-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .clear-button {
   padding: 10px 14px;
   background: transparent;
@@ -344,6 +361,10 @@ input, select, textarea {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
 }
 
+.transcript-entry--latest {
+  animation: slideIn 0.3s ease-out;
+}
+
 .transcript-timestamp {
   font-size: 13px;
   color: var(--text-secondary);
@@ -356,6 +377,27 @@ input, select, textarea {
   font-size: 15px;
   line-height: 1.6;
   color: var(--text-primary);
+}
+
+.transcript-partial {
+  color: #9aa0a6;
+  font-style: italic;
+}
+
+.transcript-translation {
+  margin-top: 8px;
+  color: #10a37f;
+  font-size: 13px;
+}
+
+.translation-stable {
+  color: #111111;
+  font-style: normal;
+}
+
+.translation-partial {
+  color: #9aa0a6;
+  font-style: italic;
 }
 
 .empty-state {
@@ -373,9 +415,61 @@ input, select, textarea {
   opacity: 0.3;
 }
 
+.empty-icon svg {
+  width: 64px;
+  height: 64px;
+  opacity: 0.3;
+}
+
 .empty-text {
   font-size: 14px;
   color: var(--text-secondary);
+}
+
+.empty-listening {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.recording-dots {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.recording-dot {
+  border-radius: 50%;
+  background: #10a37f;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.recording-dot--large {
+  width: 8px;
+  height: 8px;
+}
+
+.recording-dot--small {
+  width: 6px;
+  height: 6px;
+}
+
+.recording-dot--delay-1 {
+  animation-delay: 0.2s;
+}
+
+.recording-dot--delay-2 {
+  animation-delay: 0.4s;
+}
+
+.transcript-recording-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  opacity: 0.5;
+  font-size: 12px;
 }
 
 .right-panel {
