@@ -88,12 +88,12 @@ const stream = await navigator.mediaDevices.getDisplayMedia({
 **Related Files:**
 - `src/services/audioService.ts` - Audio capture implementation
 - `electron/main.ts` - Electron main process with loopback handler
-- `SYSTEM_AUDIO_README.md` - macOS system audio documentation
+- [SYSTEM_AUDIO.md](SYSTEM_AUDIO.md) - macOS system audio documentation
 
 **Additional Notes:**
 - This only works in **dev mode** or **signed apps** on macOS
 - Unsigned packaged apps are blocked by macOS security
-- See `SYSTEM_AUDIO_README.md` for packaging/signing requirements
+- See [SYSTEM_AUDIO.md](SYSTEM_AUDIO.md) for packaging/signing requirements
 
 ---
 
@@ -115,6 +115,8 @@ const stream = await navigator.mediaDevices.getDisplayMedia({
 **Important:** 
 - You may need to completely quit and restart the app
 - Sometimes you need to restart your terminal as well
+
+For more details, see [SYSTEM_AUDIO.md](SYSTEM_AUDIO.md).
 
 ---
 
@@ -172,11 +174,12 @@ Check the WebSocket URL in console logs:
 
 1. **Backend Whisper not configured:**
    - Check backend has OpenAI API key or local Whisper setup
-   - See `meetlens-backend/GETTING_STARTED.md`
+   - See backend documentation for configuration
 
 2. **Audio format mismatch:**
    - Backend expects: `pcm_s16le_16k_mono`
    - Check console for: `Declared backend audio_format: pcm_s16le_16k_mono`
+   - See [ARCHITECTURE.md](ARCHITECTURE.md) for audio format details
 
 3. **Network/firewall blocking WebSocket:**
    - Try accessing backend directly: `http://localhost:8000/docs`
@@ -198,6 +201,8 @@ npm run build
 
 If signing fails, update `electron-builder.json` to skip signing for local builds.
 
+For more build configuration details, see [ARCHITECTURE.md](ARCHITECTURE.md).
+
 ---
 
 ## Getting Help
@@ -205,9 +210,10 @@ If signing fails, update `electron-builder.json` to skip signing for local build
 1. Check console logs in DevTools (View → Toggle Developer Tools)
 2. Check backend logs in terminal
 3. Review documentation:
-   - `SYSTEM_AUDIO_README.md` - Audio capture on macOS
-   - `meetlens-backend/GETTING_STARTED.md` - Backend setup
-   - `README.md` - General setup and usage
+   - [SYSTEM_AUDIO.md](SYSTEM_AUDIO.md) - Audio capture on macOS
+   - [GETTING_STARTED.md](GETTING_STARTED.md) - Setup and configuration
+   - [ARCHITECTURE.md](ARCHITECTURE.md) - Technical details
+   - [../README.md](../README.md) - Quick start guide
 
 ---
 
@@ -215,7 +221,7 @@ If signing fails, update `electron-builder.json` to skip signing for local build
 
 To enable verbose logging:
 
-1. Open DevTools Console
+1. Open DevTools Console (View → Toggle Developer Tools)
 2. Look for logs prefixed with:
    - `[AudioCapture]` - Audio capture service
    - `[BackendTranscription]` - WebSocket transcription
@@ -224,3 +230,5 @@ To enable verbose logging:
 3. Check audio levels in real-time:
    - RMS values should be > 0.001 when audio is playing
    - Peak values should vary based on audio volume
+
+For understanding the audio pipeline, see [ARCHITECTURE.md](ARCHITECTURE.md).

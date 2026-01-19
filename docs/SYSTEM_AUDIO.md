@@ -69,6 +69,8 @@ const stream = await navigator.mediaDevices.getDisplayMedia({
 - **Electron handler**: `electron/main.ts` → `configureDisplayMediaHandling()`
 - **Feature flag**: `electron/main.ts` line 17 → `MacLoopbackAudioForScreenShare`
 
+For more details on the audio architecture, see [ARCHITECTURE.md](ARCHITECTURE.md).
+
 ## Solutions
 
 ### Option 1: Sign the App (Recommended for Production)
@@ -117,6 +119,8 @@ The app attempts to use:
 
 All of these work in development mode but are blocked for unsigned packaged apps on macOS Sequoia.
 
+For a complete understanding of the audio pipeline, see [ARCHITECTURE.md](ARCHITECTURE.md).
+
 ## Verification
 
 To verify system audio is working:
@@ -125,6 +129,10 @@ To verify system audio is working:
 3. Check the audio RMS values in console:
    - **Microphone only**: RMS ~0.001-0.01 (quiet)
    - **System audio working**: RMS ~0.05-0.2 (louder, varies with content)
+
+## Troubleshooting
+
+If you're still experiencing issues with system audio capture, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for common problems and solutions.
 
 ## References
 
