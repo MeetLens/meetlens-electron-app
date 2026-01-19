@@ -48,13 +48,6 @@ function App() {
     }
   }, [currentMeeting]);
 
-  // Auto-scroll to latest transcript
-  useEffect(() => {
-    if (transcriptContainerRef.current && transcripts.length > 0) {
-      const container = transcriptContainerRef.current;
-      container.scrollTop = container.scrollHeight;
-    }
-  }, [transcripts]);
 
   const loadMeetings = async () => {
     const loadedMeetings = await window.electronAPI.getMeetings();

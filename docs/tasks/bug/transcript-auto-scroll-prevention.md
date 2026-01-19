@@ -33,10 +33,10 @@ Users should be able to:
 High - Core functionality issue affecting meeting usability
 
 ## Status
-Open
+Resolved
 
 ## Acceptance Criteria
-- [ ] User can scroll up without auto-scroll interfering
-- [ ] Auto-scroll resumes when user scrolls back to bottom
-- [ ] Visual indicator shows when auto-scroll is paused/active
-- [ ] No performance impact on transcript rendering
+- [x] User can scroll up without auto-scroll interfering
+- [x] Auto-scroll resumes when user scrolls back to bottom
+- [x] Visual indicator shows when auto-scroll is paused/active
+- [x] No performance impact on transcript rendering
