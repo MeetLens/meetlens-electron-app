@@ -4,10 +4,12 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 
 import translationEN from './locales/en/translation.json';
 import translationTR from './locales/tr/translation.json';
+import translationDE from './locales/de/translation.json';
 
 export const SUPPORTED_APP_LANGUAGES = [
   { code: 'en', name: 'English' },
   { code: 'tr', name: 'Türkçe' },
+  { code: 'de', name: 'Deutsch' },
 ];
 
 export const TRANSLATION_LANGUAGES = [
@@ -33,6 +35,9 @@ const resources = {
   },
   tr: {
     translation: translationTR,
+  },
+  de: {
+    translation: translationDE,
   },
 };
 

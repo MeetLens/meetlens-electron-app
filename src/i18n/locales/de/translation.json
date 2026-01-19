@@ -1,0 +1,59 @@
+{
+  "sidebar": {
+    "title": "Ihre Bereiche",
+    "new_meeting": "Neue Besprechung",
+    "no_meetings": "Noch keine Besprechungen. Klicken Sie auf +, um eine zu erstellen.",
+    "delete_confirm": "\"{{name}}\" löschen?",
+    "delete": "Löschen"
+  },
+  "topbar": {
+    "start_meeting": "Besprechung starten",
+    "stop_meeting": "Besprechung beenden",
+    "connected": "Verbunden",
+    "disconnected": "Getrennt",
+    "settings": "Einstellungen",
+    "application_settings": "Anwendungseinstellungen",
+    "app_language": "App-Sprache",
+    "translation_language": "Übersetzungssprache",
+    "translation_helper": "Transkripte werden in Echtzeit in diese Sprache übersetzt",
+    "features": "Funktionen",
+    "feature_list": [
+      "Echtzeit-mehrsprachige Transkription",
+      "Sofortige Übersetzung in 12+ Sprachen",
+      "KI-gestützte Besprechungszusammenfassungen"
+    ],
+    "cancel": "Abbrechen",
+    "save_settings": "Einstellungen speichern"
+  },
+  "transcript": {
+    "title": "Live-Transkript",
+    "scroll_paused": "Scrollen pausiert",
+    "scroll_paused_title": "Automatisches Scrollen pausiert - zum Fortsetzen nach unten scrollen",
+    "clear": "Löschen",
+    "empty_listening": "Zuhören... Sprechen Sie, um die Transkription zu sehen",
+    "empty_start": "Klicken Sie auf \"Besprechung starten\", um die Transkription zu beginnen"
+  },
+  "summary": {
+    "title": "KI-Zusammenfassung",
+    "generate": "Generieren",
+    "generating": "Generiere...",
+    "powered_by": "Unterstützt durch MeetLens KI",
+    "overview": "Überblick",
+    "action_items": "Aufgaben",
+    "decisions": "Entscheidungen",
+    "empty_has_transcripts": "Klicken Sie auf \"Generieren\", um eine Zusammenfassung zu erstellen",
+    "empty_no_transcripts": "Besprechung starten, um eine Zusammenfassung zu generieren",
+    "end_confirm": "Besprechung beendet. Möchten Sie eine Zusammenfassung generieren?",
+    "audio_error_title": "Fehler bei der Audioaufnahme: {{error}}",
+    "audio_error_message": "MeetLens benötigt die Berechtigung für die Bildschirmaufnahme, um System-Audio zu erfassen.\n\nKlicken Sie auf OK, um die Systemeinstellungen zu öffnen, und dann:\n1. Aktivieren Sie MeetLens in \"Bildschirmaufnahme\"\n2. Starten Sie MeetLens neu\n\nKlicken Sie auf Abbrechen, um nur im Mikrofonmodus fortzufahren."
+  },
+  "common": {
+    "no_meeting_selected": "Keine Besprechung ausgewählt",
+    "no_transcripts_to_summarize": "Keine Transkripte zum Zusammenfassen verfügbar",
+    "failed_to_generate_summary": "Zusammenfassung konnte nicht generiert werden: {{error}}",
+    "error_connecting_backend": "Fehler beim Verbinden zum Backend: {{error}}",
+    "failed_to_connect_backend": "Verbindung zum Backend-Transkriptionsdienst fehlgeschlagen",
+    "failed_to_start_audio": "Audioaufnahme konnte nicht gestartet werden",
+    "failed_to_start_recording": "Aufnahme konnte nicht gestartet werden: {{error}}"
+  }
+}
