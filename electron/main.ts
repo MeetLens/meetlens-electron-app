@@ -13,7 +13,10 @@ import Database from 'better-sqlite3';
 let mainWindow: BrowserWindow | null = null;
 let db: Database | undefined;
 
-// Enable macOS loopback audio for screen share
+// CRITICAL: Enable macOS loopback audio for screen share
+// This flag allows getDisplayMedia() to capture system audio on macOS.
+// Without this flag, only microphone audio would be available.
+// Works in dev mode (Electron.app is signed) but requires app signing for production.
 app.commandLine.appendSwitch('enable-features', 'MacLoopbackAudioForScreenShare');
 
 export function createDatabase() {
@@ -110,7 +113,14 @@ function configureDisplayMediaHandling() {
     }
   });
 
-  // Provide display media (screen + loopback audio) to renderer via getDisplayMedia
+  // CRITICAL: This handler provides loopback audio for macOS system audio capture
+  // When renderer calls getDisplayMedia({ audio: true }), this handler is triggered
+  // and returns audio: 'loopback' which enables actual system audio capture.
+  //
+  // Without this, the audio track would be created but contain only silence.
+  // This works with the MacLoopbackAudioForScreenShare flag set on line 17.
+  //
+  // See SYSTEM_AUDIO_README.md and TROUBLESHOOTING.md for details.
   session.defaultSession.setDisplayMediaRequestHandler(async (_request, callback) => {
     try {
       console.log('[Main] Display media request handler called');
@@ -126,7 +136,7 @@ function configureDisplayMediaHandling() {
 
       callback({
         video: screenSource,
-        audio: 'loopback',
+        audio: 'loopback', // This enables system audio capture on macOS
       });
     } catch (error) {
       console.error('[Main] Error handling display media request:', error);

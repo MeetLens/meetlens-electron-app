@@ -90,6 +90,37 @@ The app requires:
 
 Grant these permissions when prompted for full functionality.
 
+**macOS Users:** See [SYSTEM_AUDIO_README.md](./SYSTEM_AUDIO_README.md) for important information about system audio capture on macOS.
+
+## Troubleshooting
+
+For detailed troubleshooting guides, see:
+- **[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)** - Common issues and solutions
+- **[SYSTEM_AUDIO_README.md](./SYSTEM_AUDIO_README.md)** - macOS system audio capture guide
+
+### Quick Fixes
+
+#### No Desktop Audio Captured (Silent Audio)
+**Symptom:** Recording works but no transcription from desktop audio (music, videos, apps)
+
+**Solution:** The app uses `getDisplayMedia()` API for system audio. Verify:
+1. Check console logs for `rms:` values - should be > 0 when audio plays
+2. If always 0.0000, see [TROUBLESHOOTING.md](./TROUBLESHOOTING.md#issue-no-desktop-audio-captured-silent-audio--zero-rms)
+3. On macOS, this works in dev mode but requires signing for packaged apps
+
+#### Transcription Not Working
+- Verify ElevenLabs API key is correct
+- Check internet connection
+- Look for connection status indicator
+- Check backend is running (if using local backend)
+
+#### Translation Not Working
+- Verify translation API key is correct
+- Ensure selected language is supported
+- Check API quota limits
+
+For more issues, see **[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)**
+
 ## Supported Languages
 
 - Turkish
@@ -121,7 +152,7 @@ Grant these permissions when prompted for full functionality.
 ```
 meetlens/
 ├── electron/          # Electron main process
-│   ├── main.ts       # Main process entry
+│   ├── main.ts       # Main process entry (includes loopback audio setup)
 │   └── preload.ts    # Preload script for IPC
 ├── src/              # React application
 │   ├── components/   # React components
@@ -130,10 +161,21 @@ meetlens/
 │   ├── App.tsx       # Main App component
 │   ├── main.tsx      # React entry point
 │   └── index.css     # Global styles
+├── docs/             # Documentation
+├── TROUBLESHOOTING.md      # Troubleshooting guide
+├── SYSTEM_AUDIO_README.md  # macOS audio capture guide
 ├── package.json
 ├── tsconfig.json
 └── vite.config.ts
 ```
+
+## Documentation
+
+- **[README.md](./README.md)** (this file) - Getting started guide
+- **[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)** - Common issues and solutions
+- **[SYSTEM_AUDIO_README.md](./SYSTEM_AUDIO_README.md)** - macOS system audio capture
+- **[RELEASE_NOTES.md](./RELEASE_NOTES.md)** - Release history and changes
+- **[docs/DLS.md](./docs/DLS.md)** - Design system documentation
 
 ## Troubleshooting
 

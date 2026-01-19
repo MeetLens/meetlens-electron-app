@@ -149,51 +149,26 @@ export class AudioCaptureService {
   }
 
   private async captureSystemAudio() {
-    // Fallback to legacy desktopCapturer path
-    const sources = await window.electronAPI.getAudioSources();
-    console.log('Available audio sources:', sources.length);
-
-    if (sources.length === 0) {
-      console.warn('No desktop capture sources available');
-      return;
-    }
-
-    const primarySource =
-      sources.find((s: any) => s.name.includes('Entire Screen') || s.name.includes('Screen 1')) ||
-      sources[0];
-    console.log('Using audio source:', primarySource.name);
-
-    // Track active apps from sources
-    sources.forEach((source: any) => {
-      if (!source.name.includes('Screen') && !source.name.includes('Entire')) {
-        this.activeApps.push({
-          name: source.name,
-          timestamp: new Date().toISOString(),
-        });
-      }
-    });
-
-    const systemAudioConstraints: any = {
-      audio: {
-        mandatory: {
-          chromeMediaSource: 'desktop',
-          chromeMediaSourceId: primarySource.id,
-        },
-      },
-      video: {
-        mandatory: {
-          chromeMediaSource: 'desktop',
-          chromeMediaSourceId: primarySource.id,
-          maxWidth: 1,
-          maxHeight: 1,
-        },
-      },
-    };
-
     try {
-      const systemStreamRaw = await navigator.mediaDevices.getUserMedia(
-        systemAudioConstraints as MediaStreamConstraints
-      );
+      // IMPORTANT: Use getDisplayMedia() API for macOS loopback audio
+      // 
+      // Why not getUserMedia() with chromeMediaSource: 'desktop'?
+      // - That legacy API creates an audio track but with NO actual audio data on macOS
+      // - Results in RMS: 0.0000, peak: 0.0000 (silent track)
+      // - Does not trigger Electron's setDisplayMediaRequestHandler
+      //
+      // getDisplayMedia() properly triggers the handler in electron/main.ts which
+      // returns audio: 'loopback', enabling actual system audio capture.
+      // This works in dev mode (Electron.app is signed) but requires signing for production.
+      //
+      // See SYSTEM_AUDIO_README.md and TROUBLESHOOTING.md for details.
+      const systemStreamRaw = await navigator.mediaDevices.getDisplayMedia({
+        audio: true, // Request loopback audio (triggers Electron handler)
+        video: {
+          width: 1,
+          height: 1,
+        },
+      } as MediaStreamConstraints);
 
       // Extract only audio tracks
       const audioTracks = systemStreamRaw.getAudioTracks();
@@ -207,13 +182,25 @@ export class AudioCaptureService {
           console.log('[AudioCapture] System track settings:', systemTrack.getSettings());
         }
       } else {
-        console.warn('No audio tracks in system stream - Windows may need virtual audio cable');
+        console.warn('No audio tracks in system stream - Desktop audio may not be available');
       }
 
       // Stop video tracks as we only need audio
       systemStreamRaw.getVideoTracks().forEach((track) => track.stop());
+      
+      // Still get sources for app tracking
+      const sources = await window.electronAPI.getAudioSources();
+      sources.forEach((source: any) => {
+        if (!source.name.includes('Screen') && !source.name.includes('Entire') && !source.name.includes('Bildschirm')) {
+          this.activeApps.push({
+            name: source.name,
+            timestamp: new Date().toISOString(),
+          });
+        }
+      });
     } catch (err) {
       console.warn('System audio capture failed:', err);
+      console.log('Falling back to microphone-only mode');
     }
   }
 
