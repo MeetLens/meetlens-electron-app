@@ -582,19 +582,19 @@ function App() {
           : partialTranscriptRef.current;
       const normalizedTranscriptText = transcriptText?.trim();
 
-      if (sessionBubble && normalizedTranscriptText) {
+      const translationSource = sessionBubble?.translation || stableTranslationRef.current;
+      const combinedTranslation =
+        translationSource && translationSource.trim().length > 0
+          ? translationSource
+          : partialTranslationRef.current;
+      const translationToPersist = combinedTranslation?.trim() || undefined;
+      const timestampForSave = sessionBubble?.timestamp || formatTimestamp();
+
+      if (normalizedTranscriptText) {
         console.log(
           '💾 Saving session transcript to database:',
           normalizedTranscriptText.substring(0, 50) + '...'
         );
-        const translationSource = sessionBubble.translation || stableTranslationRef.current;
-        const combinedTranslation =
-          translationSource && translationSource.trim().length > 0
-            ? translationSource
-            : partialTranslationRef.current;
-        const translationToPersist = combinedTranslation?.trim() || undefined;
-        const timestampForSave = sessionBubble.timestamp || formatTimestamp();
-
         upsertTranscriptEntry(recordingMeetingId, sessionId, (entry) => ({
           ...entry,
           text: normalizedTranscriptText,
