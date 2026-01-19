@@ -4,10 +4,7 @@ interface TopBarProps {
   isRecording: boolean;
   isConnected: boolean;
   onStartStop: () => void;
-  elevenLabsApiKey: string;
-  deeplApiKey: string;
   selectedLanguage: string;
-  onSaveApiKeys: (elevenLabsKey: string, deeplKey: string) => void;
   onLanguageChange: (language: string) => void;
 }
 
@@ -32,18 +29,12 @@ function TopBar({
   isRecording,
   isConnected,
   onStartStop,
-  elevenLabsApiKey,
-  deeplApiKey,
   selectedLanguage,
-  onSaveApiKeys,
   onLanguageChange,
 }: TopBarProps) {
   const [showSettings, setShowSettings] = useState(false);
-  const [elevenLabsKey, setElevenLabsKey] = useState(elevenLabsApiKey);
-  const [deeplKey, setDeeplKey] = useState(deeplApiKey);
 
   const handleSaveSettings = () => {
-    onSaveApiKeys(elevenLabsKey, deeplKey);
     setShowSettings(false);
   };
 
@@ -89,49 +80,7 @@ function TopBar({
       {showSettings && (
         <div className="settings-overlay" onClick={() => setShowSettings(false)}>
           <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
-            <h2 className="settings-title">API Settings</h2>
-
-            <div className="settings-field">
-              <label htmlFor="elevenLabsKey" className="settings-label">
-                ElevenLabs API Key
-              </label>
-              <input
-                id="elevenLabsKey"
-                type="password"
-                className="api-key-input"
-                value={elevenLabsKey}
-                onChange={(e) => setElevenLabsKey(e.target.value)}
-                placeholder="sk_..."
-              />
-              <p className="settings-helper">
-                Get your key at{' '}
-                <a href="https://elevenlabs.io" target="_blank" rel="noopener noreferrer">
-                  elevenlabs.io
-                </a>{' '}
-                • Used for speech-to-text
-              </p>
-            </div>
-
-            <div className="settings-field">
-              <label htmlFor="deeplKey" className="settings-label">
-                DeepL API Key
-              </label>
-              <input
-                id="deeplKey"
-                type="password"
-                className="api-key-input"
-                value={deeplKey}
-                onChange={(e) => setDeeplKey(e.target.value)}
-                placeholder="xxx:fx"
-              />
-              <p className="settings-helper">
-                Get your key at{' '}
-                <a href="https://www.deepl.com/pro-api" target="_blank" rel="noopener noreferrer">
-                  deepl.com/pro-api
-                </a>{' '}
-                • Real-time translation
-              </p>
-            </div>
+            <h2 className="settings-title">Application Settings</h2>
 
             <div className="settings-field settings-field-large">
               <label htmlFor="translationLanguage" className="settings-label">

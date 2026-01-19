@@ -71,46 +71,12 @@ On first launch, you'll need to grant permissions:
 - Permissions vary by distribution and desktop environment
 - Grant microphone access when prompted
 
-### API Keys Configuration
+### API Configuration
 
-MeetLens requires API keys for transcription and translation services.
+MeetLens uses pre-configured backend services for transcription and translation. No individual API keys (ElevenLabs, DeepL, etc.) are required to be entered by the user. 
 
-#### 1. ElevenLabs API Key (Required for Transcription)
-
-ElevenLabs provides high-quality speech-to-text transcription:
-
-1. Sign up at [ElevenLabs](https://elevenlabs.io)
-2. Navigate to your dashboard
-3. Copy your API key
-4. In MeetLens:
-   - Click the **Settings** button (gear icon)
-   - Paste your API key in the **ElevenLabs API Key** field
-   - Click **Save**
-
-#### 2. Translation API Key (Optional)
-
-Choose one of the following translation providers:
-
-**Option A: Google Translate**
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com)
-2. Create a new project or select an existing one
-3. Enable the **Cloud Translation API**
-4. Navigate to **APIs & Services** → **Credentials**
-5. Create an API key
-6. In MeetLens Settings:
-   - Paste your API key in the **Translation API Key** field
-   - Leave **Use DeepL** unchecked
-   - Click **Save**
-
-**Option B: DeepL (Recommended for higher quality)**
-
-1. Sign up at [DeepL Pro API](https://www.deepl.com/pro-api)
-2. Get your API key from the account dashboard
-3. In MeetLens Settings:
-   - Paste your API key in the **Translation API Key** field
-   - Check **Use DeepL**
-   - Click **Save**
+1. **Transcription**: Automatically handled by the production backend.
+2. **Translation**: Handled by the backend via DeepL.
 
 ## Your First Meeting
 
@@ -121,10 +87,9 @@ Choose one of the following translation providers:
 
 ### 2. Configure Translation (Optional)
 
-1. Select your target language from the language dropdown
-2. Available languages:
-   - Turkish, English, Spanish, French, German, Italian
-   - Portuguese, Russian, Japanese, Korean, Chinese, Arabic
+1. Open **Settings** from the Top Bar
+2. Select your target language from the dropdown
+3. Click **Save Settings**
 
 ### 3. Start Recording
 
@@ -139,23 +104,21 @@ Choose one of the following translation providers:
 
 - **View transcript** - Real-time transcription appears in the main panel
 - **View translation** - Translated text appears below original (if language selected)
-- **Monitor audio levels** - Check console for RMS values (dev mode)
-- **Pause/Resume** - Use pause button in bottom control bar
-- **Check duration** - Meeting timer displays elapsed time
+- **AI Summary** - Click the "AI Summary" button at any time to generate a summary
+- **Monitor status** - Connection status is shown in the top right
 
 ### 5. End the Meeting
 
-1. Click **End Meeting** button (red button in bottom bar)
-2. Confirmation dialog will appear
-3. Click **Confirm** to stop recording
-4. Transcript is automatically saved to database
+1. Click **Stop Meeting** button
+2. Confirmation dialog for summary will appear
+3. Transcript is automatically saved to the local database
 
 ### 6. Review Past Meetings
 
 1. Click on any meeting in the sidebar
 2. View complete transcript with timestamps
-3. Read translated versions
-4. See meeting metadata (date, duration)
+3. Read translated versions and AI-generated summaries
+4. Manage meeting history from the sidebar (delete, select)
 
 ## Important Notes
 
@@ -180,36 +143,15 @@ See [SYSTEM_AUDIO.md](SYSTEM_AUDIO.md) for detailed setup instructions.
 
 ### Backend Connection
 
-If using a local backend for transcription:
+MeetLens connects to a production backend for real-time services:
 
-1. Ensure the backend is running:
-   ```bash
-   cd meetlens-backend
-   uvicorn main:app --reload
-   ```
-
-2. Check the WebSocket URL in `src/config.ts`:
-   - Local: `ws://localhost:8000/transcribe`
-   - Production: `wss://your-domain.com/transcribe`
-
-3. Monitor connection status in the app UI
+1. **WebSocket**: Used for streaming audio and receiving transcripts/translations
+2. **HTTP API**: Used for generating meeting summaries
+3. **Status**: Monitor the "Connected" indicator in the top bar
 
 ## Supported Languages
 
-MeetLens supports real-time translation to these languages:
-
-- **Turkish** (tr)
-- **English** (en)
-- **Spanish** (es)
-- **French** (fr)
-- **German** (de)
-- **Italian** (it)
-- **Portuguese** (pt)
-- **Russian** (ru)
-- **Japanese** (ja)
-- **Korean** (ko)
-- **Chinese** (zh)
-- **Arabic** (ar)
+MeetLens supports real-time translation to multiple languages including Turkish, English, Spanish, French, German, Italian, Portuguese, Russian, Japanese, Korean, Chinese, Arabic, and others.
 
 ## Troubleshooting First Run
 
@@ -219,16 +161,13 @@ MeetLens supports real-time translation to these languages:
 - Try restarting the application
 
 ### Transcription not working
-- Verify ElevenLabs API key is correct
 - Check internet connection
 - Look for error messages in console (Dev mode: View → Toggle Developer Tools)
-- Ensure backend is running (if using local backend)
+- Ensure backend services are reachable
 
 ### Translation not working
-- Verify translation API key is entered
-- Ensure selected language is supported
-- Check API quota/rate limits
-- Try switching between Google Translate and DeepL
+- Ensure target language is selected in settings
+- Check internet connection
 
 ### macOS: Screen recording permission issues
 - Fully quit the application

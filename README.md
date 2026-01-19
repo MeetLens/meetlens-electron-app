@@ -5,7 +5,7 @@ A desktop meeting transcription application with real-time translation capabilit
 ## Features
 
 - **Real-time Transcription** - Capture system audio and microphone input simultaneously
-- **Live Translation** - Translate transcripts to 12+ languages in real-time
+- **Live Translation** - Instant translation with DeepL support
 - **Meeting Management** - Save and review past meetings with timestamps
 - **SQLite Storage** - Persistent storage of meetings and transcripts
 - **Cross-Platform** - Available for macOS, Windows, and Linux
@@ -42,25 +42,13 @@ npm run build
 npm start
 ```
 
-## API Keys Required
-
-### ElevenLabs (Required)
-1. Sign up at [ElevenLabs](https://elevenlabs.io)
-2. Get your API key
-3. Enter it in Settings within the app
-
-### Translation API (Optional)
-Choose either:
-- **Google Translate** - Get API key from [Google Cloud Console](https://console.cloud.google.com)
-- **DeepL** - Get API key from [DeepL](https://www.deepl.com/pro-api)
-
 ## Basic Usage
 
-1. **Configure API Keys** - Click Settings and enter your API keys
-2. **Create a Meeting** - Click the + button in the sidebar
-3. **Start Recording** - Click "Start Meeting" to begin transcription
-4. **Select Language** - Choose your target language for translation
-5. **Stop Recording** - Click "Stop Meeting" when done
+1. **Create a Meeting** - Click the + button in the sidebar
+2. **Select Language** - Choose your target language for translation in Settings
+3. **Start Recording** - Click "Start Meeting" to begin transcription and translation
+4. **Stop Recording** - Click "Stop Meeting" when done
+5. **AI Summary** - Generate a structured summary of your meeting with one click
 
 ## Audio Permissions
 
@@ -82,7 +70,7 @@ Grant these permissions when prompted:
 
 ## Supported Languages
 
-Turkish, English, Spanish, French, German, Italian, Portuguese, Russian, Japanese, Korean, Chinese, Arabic
+Support for multiple languages including Turkish, English, Spanish, French, German, Italian, Portuguese, Russian, Japanese, Korean, Chinese, Arabic, and more.
 
 ## Technology Stack
 
@@ -130,13 +118,12 @@ For detailed architecture information, see [docs/ARCHITECTURE.md](docs/ARCHITECT
 - See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 
 ### Transcription Not Working
-- Verify ElevenLabs API key
+- Ensure backend services are reachable
 - Check internet connection
-- Ensure backend is running (if using local backend)
 
 ### Translation Not Working
-- Verify translation API key
-- Check API quota limits
+- Ensure target language is correctly selected in Settings
+- Verify internet connection
 
 For more help, see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
 

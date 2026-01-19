@@ -25,9 +25,9 @@ MeetLens is a cross-platform desktop application built with Electron, React, and
 - **WebSocket** - Real-time bidirectional communication with backend
 
 ### AI Services
-- **ElevenLabs API** - High-quality speech-to-text transcription
-- **Google Translate API** - Real-time translation service
-- **DeepL API** - Alternative high-quality translation service
+- **Custom Transcription Service** - High-quality speech-to-text via WebSocket backend
+- **DeepL API** - Real-time translation service (handled by backend)
+- **AI Summarization** - Structured meeting summaries via backend service
 
 ### Development Tools
 - **Vitest** - Fast unit testing framework
@@ -206,20 +206,15 @@ Business logic and external integrations:
   - Exports audio state and controls
 
 - **`backendTranscriptionService.ts`** - WebSocket transcription
-  - Maintains WebSocket connection to backend
+  - Maintains WebSocket connection to production backend
   - Streams PCM audio chunks
-  - Receives real-time transcription results
+  - Receives real-time transcription and translation results
   - Handles connection lifecycle and errors
-
-- **`translationService.ts`** - Translation API integration
-  - Supports Google Translate and DeepL
-  - Batch translates transcript segments
-  - Handles API errors and rate limiting
 
 - **`backendSummaryService.ts`** - Meeting summarization
   - Sends full transcript to backend
-  - Receives AI-generated summary
-  - Handles summary formatting
+  - Receives structured AI-generated summary (Overview, Key Points, Action Items)
+  - Handles summary formatting for display
 
 ### Audio Worklet (`src/worklets/`)
 
@@ -442,10 +437,11 @@ class PCMProcessor extends AudioWorkletProcessor {
 ```sql
 CREATE TABLE meetings (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  title TEXT NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  duration INTEGER,  -- seconds
-  status TEXT        -- 'active', 'completed'
+  name TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  summary TEXT,
+  full_transcript TEXT
 );
 ```
 
@@ -454,10 +450,10 @@ CREATE TABLE meetings (
 CREATE TABLE transcripts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   meeting_id INTEGER NOT NULL,
+  timestamp TEXT NOT NULL,
   text TEXT NOT NULL,
   translation TEXT,
-  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (meeting_id) REFERENCES meetings(id)
+  FOREIGN KEY (meeting_id) REFERENCES meetings(id) ON DELETE CASCADE
 );
 ```
 
@@ -542,9 +538,8 @@ See [TESTING.md](TESTING.md) for complete testing documentation.
 ## Security Considerations
 
 ### API Keys
-- Store in application settings (not in code)
-- Never commit API keys to repository
-- Use environment variables for backend URLs
+- Handled securely by the backend services
+- No user-provided API keys required in the desktop application
 
 ### Electron Security
 - Context isolation enabled

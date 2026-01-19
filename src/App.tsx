@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Meeting, Transcript } from './types/electron';
 import { AudioCaptureService } from './services/audioService';
-import { TranslationService } from './services/translationService';
 import { BackendSummaryService, type SummaryResponse } from './services/backendSummaryService';
 import { BackendTranscriptionService } from './services/backendTranscriptionService';
 import TopBar from './components/TopBar';
@@ -22,8 +21,6 @@ function App() {
   const [isRecording, setIsRecording] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState('tr');
-  const [elevenLabsApiKey, setElevenLabsApiKey] = useState('');
-  const [deeplApiKey, setDeeplApiKey] = useState('');
   const [meetingSummary, setMeetingSummary] = useState('');
   const [structuredSummary, setStructuredSummary] = useState<SummaryResponse | null>(null);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
@@ -32,7 +29,6 @@ function App() {
   const [partialTranscript, setPartialTranscript] = useState('');
 
   const audioServiceRef = useRef<AudioCaptureService | null>(null);
-  const translationServiceRef = useRef<TranslationService | null>(null);
   const backendSummaryServiceRef = useRef<BackendSummaryService | null>(null);
   const backendTranscriptionServiceRef = useRef<BackendTranscriptionService | null>(null);
   const transcriptContainerRef = useRef<HTMLDivElement | null>(null);
@@ -43,7 +39,6 @@ function App() {
 
   useEffect(() => {
     loadMeetings();
-    loadApiKeys();
   }, []);
 
   useEffect(() => {
@@ -60,28 +55,6 @@ function App() {
       container.scrollTop = container.scrollHeight;
     }
   }, [transcripts]);
-
-  const loadApiKeys = () => {
-    const savedElevenLabsKey = localStorage.getItem('elevenLabsApiKey');
-    const savedDeeplKey = localStorage.getItem('deeplApiKey');
-
-    if (savedElevenLabsKey) setElevenLabsApiKey(savedElevenLabsKey);
-    if (savedDeeplKey) setDeeplApiKey(savedDeeplKey);
-
-    // Load from environment variables as fallback
-    const envElevenLabsKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
-    const envDeeplKey = import.meta.env.VITE_DEEPL_API_KEY;
-
-    if (!savedElevenLabsKey && envElevenLabsKey) setElevenLabsApiKey(envElevenLabsKey);
-    if (!savedDeeplKey && envDeeplKey) setDeeplApiKey(envDeeplKey);
-  };
-
-  const saveApiKeys = (elevenLabsKey: string, deeplKey: string) => {
-    localStorage.setItem('elevenLabsApiKey', elevenLabsKey);
-    localStorage.setItem('deeplApiKey', deeplKey);
-    setElevenLabsApiKey(elevenLabsKey);
-    setDeeplApiKey(deeplKey);
-  };
 
   const loadMeetings = async () => {
     const loadedMeetings = await window.electronAPI.getMeetings();
@@ -284,22 +257,6 @@ function App() {
       return;
     }
 
-    let translatedText: string | undefined;
-
-    if (deeplApiKey && selectedLanguage !== 'en') {
-      if (!translationServiceRef.current) {
-        translationServiceRef.current = new TranslationService(deeplApiKey, selectedLanguage);
-      }
-      translationServiceRef.current.setTargetLanguage(selectedLanguage);
-      try {
-        console.log('🌐 Translating with DeepL:', cleanedText.substring(0, 50) + '...');
-        translatedText = await translationServiceRef.current.translate(cleanedText);
-        console.log('✅ Translation received from DeepL:', translatedText?.substring(0, 50) + '...');
-      } catch (err) {
-        console.error('❌ Translation failed:', err);
-      }
-    }
-
     upsertTranscriptEntry(sessionId, (entry) => {
       const nextText = fullText
         ? cleanedText
@@ -308,11 +265,7 @@ function App() {
       return {
         ...entry,
         text: nextText,
-        translation: translatedText
-          ? fullText
-            ? translatedText
-            : [entry.translation, translatedText].filter(Boolean).join(' ').trim()
-          : entry.translation,
+        translation: entry.translation,
         sessionId,
       };
     });
@@ -623,10 +576,7 @@ function App() {
         isRecording={isRecording}
         isConnected={isConnected}
         onStartStop={isRecording ? stopRecording : startRecording}
-        elevenLabsApiKey={elevenLabsApiKey}
-        deeplApiKey={deeplApiKey}
         selectedLanguage={selectedLanguage}
-        onSaveApiKeys={saveApiKeys}
         onLanguageChange={setSelectedLanguage}
       />
 

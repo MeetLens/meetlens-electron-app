@@ -287,37 +287,6 @@ export function registerIpcHandlers(database: Database) {
     const result = stmt.get(meetingId);
     return result || { summary: null, full_transcript: null };
   });
-
-  ipcMain.handle('translate-text', async (_event: IpcMainInvokeEvent, text: string, targetLang: string, apiKey: string) => {
-    try {
-      const url = 'https://api-free.deepl.com/v2/translate';
-
-      const params = new URLSearchParams({
-        auth_key: apiKey,
-        text: text,
-        target_lang: targetLang.toUpperCase(),
-      });
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: params.toString(),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`DeepL API error: ${response.status} - ${errorText}`);
-      }
-
-      const data = await response.json() as any;
-      return data.translations[0].text;
-    } catch (error) {
-      console.error('Translation error:', error);
-      throw error;
-    }
-  });
 }
 
 function bootstrap() {

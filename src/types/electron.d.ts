@@ -46,7 +46,6 @@ declare global {
         fullTranscript: string
       ) => Promise<{ success: boolean }>;
       getMeetingSummary: (meetingId: number) => Promise<{ summary: string | null; full_transcript: string | null }>;
-      translateText: (text: string, targetLang: string, apiKey: string) => Promise<string>;
     };
   }
 }

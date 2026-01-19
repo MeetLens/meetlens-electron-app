@@ -10,6 +10,7 @@ Welcome to the MeetLens documentation! This guide will help you navigate all ava
 - **[System Audio](SYSTEM_AUDIO.md)** - macOS audio capture setup and limitations
 - **[Testing](TESTING.md)** - Testing strategy and commands
 - **[Design Language System](DLS.md)** - UI/UX guidelines and component specifications
+- **[Tasks](tasks/)** - Task management and tracking by type (Features, Bugs, Refactors, etc.)
 
 ## Documentation Overview
 
@@ -17,7 +18,7 @@ Welcome to the MeetLens documentation! This guide will help you navigate all ava
 
 | Document | Description |
 |----------|-------------|
-| [GETTING_STARTED.md](GETTING_STARTED.md) | Complete setup guide including prerequisites, installation, API key configuration, permissions setup, and first meeting walkthrough |
+| [GETTING_STARTED.md](GETTING_STARTED.md) | Complete setup guide including prerequisites, installation, permissions setup, and first meeting walkthrough |
 | [SYSTEM_AUDIO.md](SYSTEM_AUDIO.md) | macOS-specific audio capture setup, `getDisplayMedia()` API usage, BlackHole configuration, and app signing requirements |
 
 ### For Development
@@ -55,7 +56,13 @@ meetlens-electron-app/
     ├── TROUBLESHOOTING.md      # Troubleshooting guide
     ├── SYSTEM_AUDIO.md         # macOS audio setup
     ├── TESTING.md              # Testing guide
-    └── DLS.md                  # Design system
+    ├── DLS.md                  # Design system
+    └── tasks/                  # Task management and tracking
+        ├── feature/            # Feature implementation tasks
+        ├── bug/                # Bug fix tasks
+        ├── refactor/           # Refactoring tasks
+        ├── research/           # Technical research tasks
+        └── release/            # Release management tasks
 ```
 
 ## Contributing to Documentation

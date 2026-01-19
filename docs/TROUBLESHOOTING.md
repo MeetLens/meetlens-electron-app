@@ -172,9 +172,9 @@ Check the WebSocket URL in console logs:
 
 **Common Causes:**
 
-1. **Backend Whisper not configured:**
-   - Check backend has OpenAI API key or local Whisper setup
-   - See backend documentation for configuration
+1. **Backend Transcription Service Issues:**
+   - Ensure the transcription backend is properly configured
+   - Check backend logs for API errors or service downtime
 
 2. **Audio format mismatch:**
    - Backend expects: `pcm_s16le_16k_mono`
@@ -182,8 +182,8 @@ Check the WebSocket URL in console logs:
    - See [ARCHITECTURE.md](ARCHITECTURE.md) for audio format details
 
 3. **Network/firewall blocking WebSocket:**
-   - Try accessing backend directly: `http://localhost:8000/docs`
    - Check browser network tab for WebSocket traffic
+   - Ensure outgoing WebSocket connections are allowed on your network
 
 ---
 
