@@ -445,32 +445,35 @@ export class BackendTranscriptionService {
             }
           }, 1000);
 
-          // Listen for final messages
-          const originalOnMessage = this.ws.onmessage;
-          this.ws.onmessage = (event) => {
+        // Listen for final messages
+        const currentWs = this.ws;
+        if (currentWs) {
+          const originalOnMessage = currentWs.onmessage;
+          currentWs.onmessage = (event) => {
             try {
-              const message: ServerMessage = JSON.parse(event.data);
+              const message: ServerMessage = JSON.parse(event.data as string);
               if (message.type === 'transcript_stable' || message.type === 'error') {
                 console.log('[BackendTranscription] Received final message:', message.type);
                 messageReceived = true;
                 clearTimeout(timeout);
                 // Restore original handler and call it
-                this.ws!.onmessage = originalOnMessage;
+                currentWs.onmessage = originalOnMessage;
                 if (originalOnMessage) {
-                  originalOnMessage.call(this.ws, event);
+                  originalOnMessage.call(currentWs, event);
                 }
                 resolve();
               } else if (originalOnMessage) {
                 // Call original handler for other messages
-                originalOnMessage.call(this.ws, event);
+                originalOnMessage.call(currentWs, event);
               }
             } catch (error) {
               console.warn('[BackendTranscription] Error parsing final message:', error);
               if (originalOnMessage) {
-                originalOnMessage.call(this.ws, event);
+                originalOnMessage.call(currentWs, event);
               }
             }
           };
+        }
         });
       }
 

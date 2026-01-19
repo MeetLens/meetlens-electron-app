@@ -1,5 +1,6 @@
 import { Meeting } from '../types/electron';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface SidebarProps {
   meetings: Meeting[];
@@ -10,9 +11,11 @@ interface SidebarProps {
 }
 
 function Sidebar({ meetings, currentMeeting, onSelectMeeting, onNewMeeting, onDeleteMeeting }: SidebarProps) {
+  const { t, i18n } = useTranslation();
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
+    return date.toLocaleString(i18n.language, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -25,8 +28,8 @@ function Sidebar({ meetings, currentMeeting, onSelectMeeting, onNewMeeting, onDe
     <div className="sidebar">
       <div className="sidebar-header">
         <div className="sidebar-title">
-          <h2>Your Spaces</h2>
-          <button className="new-meeting-button" onClick={onNewMeeting} title="New Meeting">
+          <h2>{t('sidebar.title')}</h2>
+          <button className="new-meeting-button" onClick={onNewMeeting} title={t('sidebar.new_meeting')}>
             +
           </button>
         </div>
@@ -35,7 +38,7 @@ function Sidebar({ meetings, currentMeeting, onSelectMeeting, onNewMeeting, onDe
       <div className="meetings-list">
         {meetings.length === 0 ? (
           <div style={{ padding: '20px', textAlign: 'center', color: '#8b949e' }}>
-            No meetings yet. Click + to create one.
+            {t('sidebar.no_meetings')}
           </div>
         ) : (
           meetings.map((meeting) => (
@@ -51,7 +54,7 @@ function Sidebar({ meetings, currentMeeting, onSelectMeeting, onNewMeeting, onDe
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (window.confirm(`Delete "${meeting.name}"?`)) {
+                  if (window.confirm(t('sidebar.delete_confirm', { name: meeting.name }))) {
                     onDeleteMeeting(meeting.id);
                   }
                 }}
@@ -71,7 +74,7 @@ function Sidebar({ meetings, currentMeeting, onSelectMeeting, onNewMeeting, onDe
                 }}
                 className="delete-meeting-btn"
               >
-                Delete
+                {t('sidebar.delete')}
               </button>
             </div>
           ))

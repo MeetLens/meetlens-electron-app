@@ -46,7 +46,7 @@ Users should be able to:
 High - Data integrity issue affecting meeting content accuracy
 
 ## Status
-Open
+Resolved
 
 ## Acceptance Criteria
 - [ ] Transcripts only appear in the correct active meeting space

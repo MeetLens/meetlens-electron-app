@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface TranscriptEntry {
   timestamp: string;
@@ -13,6 +14,7 @@ interface TranscriptPanelProps {
 }
 
 function TranscriptPanel({ transcripts, onClear, isRecording }: TranscriptPanelProps) {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
   const [isNearBottom, setIsNearBottom] = useState(true);
@@ -63,7 +65,7 @@ function TranscriptPanel({ transcripts, onClear, isRecording }: TranscriptPanelP
     <div className="center-panel">
       <div className="panel-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <h2 className="panel-title">Live Transcript</h2>
+          <h2 className="panel-title">{t('transcript.title')}</h2>
           {isRecording && !isAutoScrollEnabled && (
             <div
               style={{
@@ -77,7 +79,7 @@ function TranscriptPanel({ transcripts, onClear, isRecording }: TranscriptPanelP
                 borderRadius: '10px',
                 border: '1px solid #e0e0e0'
               }}
-              title="Auto-scroll paused - scroll to bottom to resume"
+              title={t('transcript.scroll_paused_title')}
             >
               <div
                 style={{
@@ -88,12 +90,12 @@ function TranscriptPanel({ transcripts, onClear, isRecording }: TranscriptPanelP
                   animation: 'pulse 2s ease-in-out infinite'
                 }}
               />
-              <span>Scroll Paused</span>
+              <span>{t('transcript.scroll_paused')}</span>
             </div>
           )}
         </div>
         <button className="clear-button" onClick={onClear}>
-          Clear
+          {t('transcript.clear')}
         </button>
       </div>
 
@@ -103,8 +105,8 @@ function TranscriptPanel({ transcripts, onClear, isRecording }: TranscriptPanelP
             <div className="empty-icon">🎙️</div>
             <div className="empty-text">
               {isRecording
-                ? 'Listening... Speak to see transcription'
-                : 'Click "Start Meeting" to begin transcription'}
+                ? t('transcript.empty_listening')
+                : t('transcript.empty_start')}
             </div>
           </div>
         ) : (

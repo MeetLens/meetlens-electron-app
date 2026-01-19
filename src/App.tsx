@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback, Profiler } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Meeting, Transcript } from './types/electron';
 import { AudioCaptureService } from './services/audioService';
 import { BackendSummaryService, type SummaryResponse } from './services/backendSummaryService';
@@ -16,12 +17,14 @@ interface TranscriptEntry {
 }
 
 function App() {
+  const { t, i18n } = useTranslation();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [currentMeeting, setCurrentMeeting] = useState<Meeting | null>(null);
   const [transcriptsByMeeting, setTranscriptsByMeeting] = useState<Record<number, TranscriptEntry[]>>({});
   const [isRecording, setIsRecording] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState('tr');
+  const [appLanguage, setAppLanguage] = useState(i18n.language || 'tr');
+  const [translationLanguage, setTranslationLanguage] = useState('tr');
   const [meetingSummary, setMeetingSummary] = useState('');
   const [structuredSummary, setStructuredSummary] = useState<SummaryResponse | null>(null);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
@@ -391,13 +394,13 @@ function App() {
 
   const generateMeetingSummary = useCallback(async () => {
     if (!currentMeeting) {
-      alert('No meeting selected');
+      alert(t('common.no_meeting_selected'));
       return;
     }
 
     const currentTranscripts = currentMeeting ? transcriptsByMeeting[currentMeeting.id] || [] : [];
     if (currentTranscripts.length === 0) {
-      alert('No transcripts available to summarize');
+      alert(t('common.no_transcripts_to_summarize'));
       return;
     }
 
@@ -412,14 +415,11 @@ function App() {
         backendSummaryServiceRef.current = new BackendSummaryService();
       }
 
-      // Determine language parameter
-      const languageParam = selectedLanguage === 'tr' ? 'tr' : selectedLanguage === 'en' ? 'en' : null;
-
       // Call backend API
       const summaryResponse = await backendSummaryServiceRef.current.generateSummary(
         currentMeeting.id.toString(),
         fullTranscript,
-        languageParam
+        translationLanguage
       );
 
       // Store structured summary
@@ -432,11 +432,11 @@ function App() {
       await window.electronAPI.saveMeetingSummary(currentMeeting.id, formattedSummary, fullTranscript);
     } catch (error) {
       console.error('Error generating summary:', error);
-      alert(`Failed to generate summary: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(t('common.failed_to_generate_summary', { error: error instanceof Error ? error.message : 'Unknown error' }));
     } finally {
       setIsGeneratingSummary(false);
     }
-  }, [currentMeeting, transcriptsByMeeting, selectedLanguage]);
+  }, [currentMeeting, transcriptsByMeeting, translationLanguage]);
 
   const startRecording = async () => {
     // Ensure we have a meeting before starting
@@ -498,13 +498,13 @@ function App() {
         // Error callback
         (error) => {
           console.error('Backend transcription error:', error);
-          alert(`Error connecting to backend: ${error}`);
+          alert(t('common.error_connecting_backend', { error }));
           stopRecording();
         }
       );
 
       if (!connected) {
-        alert('Failed to connect to backend transcription service');
+        alert(t('common.failed_to_connect_backend'));
         return;
       }
 
@@ -519,12 +519,8 @@ function App() {
           // Show helpful error message with option to open settings
           const errorMessage = error.message || 'Unknown error';
           const openSettings = window.confirm(
-            `Error capturing audio: ${errorMessage}\n\n` +
-            `MeetLens needs Screen Recording permission to capture system audio.\n\n` +
-            `Click OK to open System Settings, then:\n` +
-            `1. Enable MeetLens in "Screen Recording"\n` +
-            `2. Restart MeetLens\n\n` +
-            `Click Cancel to continue with microphone-only mode.`
+            t('summary.audio_error_title', { error: errorMessage }) + '\n\n' +
+            t('summary.audio_error_message')
           );
 
           if (openSettings && window.electronAPI?.openScreenRecordingSettings) {
@@ -543,14 +539,14 @@ function App() {
         }
         setIsRecording(true);
       } else {
-        alert('Failed to start audio capture');
+        alert(t('common.failed_to_start_audio'));
         if (backendTranscriptionServiceRef.current) {
           backendTranscriptionServiceRef.current.disconnect();
         }
       }
     } catch (error) {
       console.error('Error starting recording:', error);
-      alert(`Failed to start recording: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(t('common.failed_to_start_recording', { error: error instanceof Error ? error.message : 'Unknown error' }));
       stopRecording();
     }
   };
@@ -626,7 +622,7 @@ function App() {
     const currentMeetingTranscripts = currentMeeting ? transcriptsByMeeting[currentMeeting.id] || [] : [];
     if (currentMeeting && currentMeetingTranscripts.length > 0) {
       setTimeout(() => {
-        if (window.confirm('Meeting ended. Would you like to generate a summary?')) {
+        if (window.confirm(t('summary.end_confirm'))) {
           generateMeetingSummary();
         }
       }, 500);
@@ -688,8 +684,10 @@ function App() {
           isRecording={isRecording}
           isConnected={isConnected}
           onStartStop={handleStartStop}
-          selectedLanguage={selectedLanguage}
-          onLanguageChange={setSelectedLanguage}
+          translationLanguage={translationLanguage}
+          onTranslationLanguageChange={setTranslationLanguage}
+          appLanguage={appLanguage}
+          onAppLanguageChange={setAppLanguage}
         />
       </Profiler>
 
@@ -707,7 +705,7 @@ function App() {
         <Profiler id="CenterPanel" onRender={onRenderCallback}>
           <div className="center-panel">
             <div className="panel-header">
-              <h2 className="panel-title">Live Transcript</h2>
+              <h2 className="panel-title">{t('transcript.title')}</h2>
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                 <button
                   className="record-button start"
@@ -721,10 +719,10 @@ function App() {
                     borderRadius: '8px',
                   }}
                 >
-                  {isGeneratingSummary ? 'Generating...' : 'AI Summary'}
+                  {isGeneratingSummary ? t('summary.generating') : t('summary.title')}
                 </button>
                 <button className="clear-button" onClick={clearTranscripts}>
-                  Clear
+                  {t('transcript.clear')}
                 </button>
               </div>
             </div>
@@ -765,10 +763,10 @@ function App() {
                           animation: 'pulse 1.5s ease-in-out 0.4s infinite'
                         }} />
                       </div>
-                      <span>Listening for speech...</span>
+                      <span>{t('transcript.empty_listening')}</span>
                     </div>
                   ) : (
-                    'Click "Start Meeting" to begin transcription'
+                    t('transcript.empty_start')
                   )}
                 </div>
               </div>
@@ -837,7 +835,7 @@ function App() {
                       borderRadius: '50%',
                       animation: 'pulse 1.5s ease-in-out infinite'
                     }} />
-                    <span>Listening...</span>
+                    <span>{t('transcript.empty_listening')}</span>
                   </div>
                 )}
               </>

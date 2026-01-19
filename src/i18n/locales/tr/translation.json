@@ -1,0 +1,59 @@
+{
+  "sidebar": {
+    "title": "Alanlarınız",
+    "new_meeting": "Yeni Toplantı",
+    "no_meetings": "Henüz toplantı yok. Bir tane oluşturmak için + simgesine tıklayın.",
+    "delete_confirm": "\"{{name}}\" silinsin mi?",
+    "delete": "Sil"
+  },
+  "topbar": {
+    "start_meeting": "Toplantıyı Başlat",
+    "stop_meeting": "Toplantıyı Durdur",
+    "connected": "Bağlı",
+    "disconnected": "Bağlantı Kesildi",
+    "settings": "Ayarlar",
+    "application_settings": "Uygulama Ayarları",
+    "app_language": "Uygulama Dili",
+    "translation_language": "Çeviri Dili",
+    "translation_helper": "Transkriptler gerçek zamanlı olarak bu dile çevrilecektir",
+    "features": "Özellikler",
+    "feature_list": [
+      "Gerçek zamanlı çok dilli transkripsiyon",
+      "12'den fazla dile anında çeviri",
+      "Yapay zeka destekli toplantı özetleri"
+    ],
+    "cancel": "İptal",
+    "save_settings": "Ayarları Kaydet"
+  },
+  "transcript": {
+    "title": "Canlı Transkript",
+    "scroll_paused": "Kaydırma Duraklatıldı",
+    "scroll_paused_title": "Otomatik kaydırma duraklatıldı - devam etmek için en alta kaydırın",
+    "clear": "Temizle",
+    "empty_listening": "Dinleniyor... Transkripsiyonu görmek için konuşun",
+    "empty_start": "Transkripsiyonu başlatmak için \"Toplantıyı Başlat\"a tıklayın"
+  },
+  "summary": {
+    "title": "Yapay Zeka Özeti",
+    "generate": "Oluştur",
+    "generating": "Oluşturuluyor...",
+    "powered_by": "MeetLens AI tarafından desteklenmektedir",
+    "overview": "Genel Bakış",
+    "action_items": "Aksiyon Maddeleri",
+    "decisions": "Kararlar",
+    "empty_has_transcripts": "Özet oluşturmak için \"Oluştur\"a tıklayın",
+    "empty_no_transcripts": "Özet oluşturmak için toplantıyı başlatın",
+    "end_confirm": "Toplantı sona erdi. Özet oluşturmak ister misiniz?",
+    "audio_error_title": "Ses yakalama hatası: {{error}}",
+    "audio_error_message": "MeetLens'in sistem sesini yakalamak için Ekran Kaydı iznine ihtiyacı var.\n\nSistem Ayarlarını açmak için Tamam'a tıklayın, ardından:\n1. \"Ekran Kaydı\" bölümünde MeetLens'i etkinleştirin\n2. MeetLens'i yeniden başlatın\n\nTıklayın İptal'e basarak yalnızca mikrofon moduyla devam edin."
+  },
+  "common": {
+    "no_meeting_selected": "Toplantı seçilmedi",
+    "no_transcripts_to_summarize": "Özetlenecek transkript yok",
+    "failed_to_generate_summary": "Özet oluşturulamadı: {{error}}",
+    "error_connecting_backend": "Sunucuya bağlanırken hata: {{error}}",
+    "failed_to_connect_backend": "Transkripsiyon servisine bağlanılamadı",
+    "failed_to_start_audio": "Ses yakalama başlatılamadı",
+    "failed_to_start_recording": "Kayıt başlatılamadı: {{error}}"
+  }
+}

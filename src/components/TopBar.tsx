@@ -1,41 +1,36 @@
 import { useState, memo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { SUPPORTED_APP_LANGUAGES, TRANSLATION_LANGUAGES } from '../i18n/config';
 
 interface TopBarProps {
   isRecording: boolean;
   isConnected: boolean;
   onStartStop: () => void;
-  selectedLanguage: string;
-  onLanguageChange: (language: string) => void;
+  translationLanguage: string;
+  onTranslationLanguageChange: (language: string) => void;
+  appLanguage: string;
+  onAppLanguageChange: (language: string) => void;
 }
-
-const LANGUAGES = [
-  { code: 'en', name: 'English (No Translation)' },
-  { code: 'tr', name: 'Turkish' },
-  { code: 'es', name: 'Spanish' },
-  { code: 'fr', name: 'French' },
-  { code: 'de', name: 'German' },
-  { code: 'it', name: 'Italian' },
-  { code: 'pt', name: 'Portuguese' },
-  { code: 'ru', name: 'Russian' },
-  { code: 'zh', name: 'Chinese' },
-  { code: 'ja', name: 'Japanese' },
-  { code: 'ko', name: 'Korean' },
-  { code: 'ar', name: 'Arabic' },
-  { code: 'nl', name: 'Dutch' },
-  { code: 'pl', name: 'Polish' },
-];
 
 function TopBar({
   isRecording,
   isConnected,
   onStartStop,
-  selectedLanguage,
-  onLanguageChange,
+  translationLanguage,
+  onTranslationLanguageChange,
+  appLanguage,
+  onAppLanguageChange,
 }: TopBarProps) {
+  const { t, i18n } = useTranslation();
   const [showSettings, setShowSettings] = useState(false);
 
   const handleSaveSettings = () => {
     setShowSettings(false);
+  };
+
+  const handleAppLanguageChange = (lang: string) => {
+    onAppLanguageChange(lang);
+    i18n.changeLanguage(lang);
   };
 
   return (
@@ -57,14 +52,14 @@ function TopBar({
                 <polygon points="8,5 19,12 8,19" />
               )}
             </svg>
-            {isRecording ? 'Stop Meeting' : 'Start Meeting'}
+            {isRecording ? t('topbar.stop_meeting') : t('topbar.start_meeting')}
           </button>
         </div>
 
         <div className="top-bar-right">
           <div className="connection-status">
             <div className={`status-dot ${isConnected ? 'connected' : 'disconnected'}`}></div>
-            <span>{isConnected ? 'Connected' : 'Disconnected'}</span>
+            <span>{isConnected ? t('topbar.connected') : t('topbar.disconnected')}</span>
           </div>
 
           <button
@@ -72,7 +67,7 @@ function TopBar({
             onClick={() => setShowSettings(!showSettings)}
             style={{ marginLeft: '12px' }}
           >
-            Settings
+            {t('topbar.settings')}
           </button>
         </div>
       </div>
@@ -80,35 +75,53 @@ function TopBar({
       {showSettings && (
         <div className="settings-overlay" onClick={() => setShowSettings(false)}>
           <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
-            <h2 className="settings-title">Application Settings</h2>
+            <h2 className="settings-title">{t('topbar.application_settings')}</h2>
 
             <div className="settings-field settings-field-large">
+              <label htmlFor="appLanguage" className="settings-label">
+                {t('topbar.app_language')}
+              </label>
+              <select
+                id="appLanguage"
+                className="api-key-input settings-select"
+                value={appLanguage}
+                onChange={(e) => handleAppLanguageChange(e.target.value)}
+              >
+                {SUPPORTED_APP_LANGUAGES.map((lang) => (
+                  <option key={lang.code} value={lang.code}>
+                    {lang.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="settings-field settings-field-large" style={{ marginTop: '20px' }}>
               <label htmlFor="translationLanguage" className="settings-label">
-                Translation Language
+                {t('topbar.translation_language')}
               </label>
               <select
                 id="translationLanguage"
                 className="api-key-input settings-select"
-                value={selectedLanguage}
-                onChange={(e) => onLanguageChange(e.target.value)}
+                value={translationLanguage}
+                onChange={(e) => onTranslationLanguageChange(e.target.value)}
               >
-                {LANGUAGES.map((lang) => (
+                {TRANSLATION_LANGUAGES.map((lang) => (
                   <option key={lang.code} value={lang.code}>
                     {lang.name}
                   </option>
                 ))}
               </select>
               <p className="settings-helper">
-                Transcripts will be translated to this language in real-time
+                {t('topbar.translation_helper')}
               </p>
             </div>
 
             <div className="settings-feature-card">
-              <h3 className="settings-feature-title">Features</h3>
+              <h3 className="settings-feature-title">{t('topbar.features')}</h3>
               <ul className="settings-feature-list">
-                <li>Real-time multilingual transcription</li>
-                <li>Instant translation to 12+ languages</li>
-                <li>AI-powered meeting summaries</li>
+                {(t('topbar.feature_list', { returnObjects: true }) as string[]).map((feature, index) => (
+                  <li key={index}>{feature}</li>
+                ))}
               </ul>
             </div>
 
@@ -117,13 +130,13 @@ function TopBar({
                 className="clear-button"
                 onClick={() => setShowSettings(false)}
               >
-                Cancel
+                {t('topbar.cancel')}
               </button>
               <button
                 className="record-button start"
                 onClick={handleSaveSettings}
               >
-                Save Settings
+                {t('topbar.save_settings')}
               </button>
             </div>
           </div>

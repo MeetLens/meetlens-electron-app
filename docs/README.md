@@ -10,6 +10,7 @@ Welcome to the MeetLens documentation! This guide will help you navigate all ava
 - **[System Audio](SYSTEM_AUDIO.md)** - macOS audio capture setup and limitations
 - **[Testing](TESTING.md)** - Testing strategy and commands
 - **[Design Language System](DLS.md)** - UI/UX guidelines and component specifications
+- **[Localization](LOCALIZATION.md)** - Guide for adding and managing application languages
 - **[Tasks](tasks/)** - Task management and tracking by type (Features, Bugs, Refactors, etc.)
 
 ## Documentation Overview
@@ -26,6 +27,7 @@ Welcome to the MeetLens documentation! This guide will help you navigate all ava
 | Document | Description |
 |----------|-------------|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Technology stack, project structure, module organization, data flow diagrams, and audio pipeline architecture |
+| [LOCALIZATION.md](LOCALIZATION.md) | Guide for adding support for new application UI languages and managing translations |
 | [TESTING.md](TESTING.md) | Testing framework (Vitest), test commands, environment setup, and testing best practices |
 | [../AGENTS.md](../AGENTS.md) | Repository guidelines for AI agents and developers (coding style, commit conventions, build commands) |
 
@@ -57,6 +59,7 @@ meetlens-electron-app/
     ├── SYSTEM_AUDIO.md         # macOS audio setup
     ├── TESTING.md              # Testing guide
     ├── DLS.md                  # Design system
+    ├── LOCALIZATION.md         # Localization guide
     └── tasks/                  # Task management and tracking
         ├── feature/            # Feature implementation tasks
         ├── bug/                # Bug fix tasks

@@ -1,0 +1,59 @@
+{
+  "sidebar": {
+    "title": "Your Spaces",
+    "new_meeting": "New Meeting",
+    "no_meetings": "No meetings yet. Click + to create one.",
+    "delete_confirm": "Delete \"{{name}}\"?",
+    "delete": "Delete"
+  },
+  "topbar": {
+    "start_meeting": "Start Meeting",
+    "stop_meeting": "Stop Meeting",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "settings": "Settings",
+    "application_settings": "Application Settings",
+    "app_language": "App Language",
+    "translation_language": "Translation Language",
+    "translation_helper": "Transcripts will be translated to this language in real-time",
+    "features": "Features",
+    "feature_list": [
+      "Real-time multilingual transcription",
+      "Instant translation to 12+ languages",
+      "AI-powered meeting summaries"
+    ],
+    "cancel": "Cancel",
+    "save_settings": "Save Settings"
+  },
+  "transcript": {
+    "title": "Live Transcript",
+    "scroll_paused": "Scroll Paused",
+    "scroll_paused_title": "Auto-scroll paused - scroll to bottom to resume",
+    "clear": "Clear",
+    "empty_listening": "Listening... Speak to see transcription",
+    "empty_start": "Click \"Start Meeting\" to begin transcription"
+  },
+  "summary": {
+    "title": "AI Summary",
+    "generate": "Generate",
+    "generating": "Generating...",
+    "powered_by": "Powered by MeetLens AI",
+    "overview": "Overview",
+    "action_items": "Action Items",
+    "decisions": "Decisions",
+    "empty_has_transcripts": "Click \"Generate\" to create summary",
+    "empty_no_transcripts": "Start meeting to generate summary",
+    "end_confirm": "Meeting ended. Would you like to generate a summary?",
+    "audio_error_title": "Error capturing audio: {{error}}",
+    "audio_error_message": "MeetLens needs Screen Recording permission to capture system audio.\n\nClick OK to open System Settings, then:\n1. Enable MeetLens in \"Screen Recording\"\n2. Restart MeetLens\n\nClick Cancel to continue with microphone-only mode."
+  },
+  "common": {
+    "no_meeting_selected": "No meeting selected",
+    "no_transcripts_to_summarize": "No transcripts available to summarize",
+    "failed_to_generate_summary": "Failed to generate summary: {{error}}",
+    "error_connecting_backend": "Error connecting to backend: {{error}}",
+    "failed_to_connect_backend": "Failed to connect to backend transcription service",
+    "failed_to_start_audio": "Failed to start audio capture",
+    "failed_to_start_recording": "Failed to start recording: {{error}}"
+  }
+}

@@ -12,7 +12,7 @@ export interface SummaryResponse {
 export interface SummaryRequest {
   session_id: string;
   full_transcript: string;
-  language: 'tr' | 'en' | null;
+  language: string | null;
 }
 
 export class BackendSummaryService {
@@ -21,7 +21,7 @@ export class BackendSummaryService {
   async generateSummary(
     sessionId: string,
     transcript: string,
-    language: 'tr' | 'en' | null = null
+    language: string | null = null
   ): Promise<SummaryResponse> {
     if (!transcript || transcript.trim().length === 0) {
       throw new Error('Insufficient content: Transcript is empty or too short');

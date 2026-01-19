@@ -1,25 +1,11 @@
 import { useEffect, useRef } from 'react';
+import { TRANSLATION_LANGUAGES } from '../i18n/config';
 
 interface TranscriptEntry {
   timestamp: string;
   text: string;
   translation?: string;
 }
-
-const SUPPORTED_LANGUAGES = [
-  { code: 'tr', name: 'Turkish' },
-  { code: 'en', name: 'English' },
-  { code: 'es', name: 'Spanish' },
-  { code: 'fr', name: 'French' },
-  { code: 'de', name: 'German' },
-  { code: 'it', name: 'Italian' },
-  { code: 'pt', name: 'Portuguese' },
-  { code: 'ru', name: 'Russian' },
-  { code: 'ja', name: 'Japanese' },
-  { code: 'ko', name: 'Korean' },
-  { code: 'zh', name: 'Chinese' },
-  { code: 'ar', name: 'Arabic' },
-];
 
 interface TranslationPanelProps {
   transcripts: TranscriptEntry[];
@@ -51,7 +37,7 @@ function TranslationPanel({
           value={selectedLanguage}
           onChange={(e) => onLanguageChange(e.target.value)}
         >
-          {SUPPORTED_LANGUAGES.map((lang) => (
+          {TRANSLATION_LANGUAGES.map((lang) => (
             <option key={lang.code} value={lang.code}>
               {lang.name}
             </option>

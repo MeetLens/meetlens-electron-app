@@ -1,5 +1,6 @@
 import { SummaryResponse } from '../services/backendSummaryService';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface SummaryPanelProps {
   summary: string;
@@ -10,12 +11,14 @@ interface SummaryPanelProps {
 }
 
 function SummaryPanel({ summary, structuredSummary, isGenerating, onGenerate, hasTranscripts }: SummaryPanelProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="right-panel" style={{ width: '380px' }}>
       <div className="translation-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
           <h3 className="panel-title" style={{ fontSize: '15px', margin: 0, fontWeight: 600 }}>
-            AI Summary
+            {t('summary.title')}
           </h3>
           <button
             className="record-button start"
@@ -29,11 +32,11 @@ function SummaryPanel({ summary, structuredSummary, isGenerating, onGenerate, ha
               borderRadius: '8px',
             }}
           >
-            {isGenerating ? 'Generating...' : 'Generate'}
+            {isGenerating ? t('summary.generating') : t('summary.generate')}
           </button>
         </div>
         <p style={{ fontSize: '11px', color: '#8e8e8e', margin: 0 }}>
-          Powered by MeetLens AI
+          {t('summary.powered_by')}
         </p>
       </div>
 
@@ -48,7 +51,7 @@ function SummaryPanel({ summary, structuredSummary, isGenerating, onGenerate, ha
               borderRadius: '50%',
               animation: 'spin 1s linear infinite'
             }}></div>
-            <div className="empty-text">Generating summary...</div>
+            <div className="empty-text">{t('summary.generating')}</div>
           </div>
         ) : structuredSummary ? (
           <div style={{ color: '#111', fontSize: '13px', lineHeight: '1.7' }}>
@@ -66,7 +69,7 @@ function SummaryPanel({ summary, structuredSummary, isGenerating, onGenerate, ha
                 textTransform: 'uppercase',
                 letterSpacing: '0.5px'
               }}>
-                Overview
+                {t('summary.overview')}
               </div>
               <div style={{ fontSize: '13px', lineHeight: '1.7' }}>
                 {structuredSummary.summary.short_overview}
@@ -84,7 +87,7 @@ function SummaryPanel({ summary, structuredSummary, isGenerating, onGenerate, ha
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px'
                 }}>
-                  Action Items
+                  {t('summary.action_items')}
                 </div>
                 <ul style={{
                   margin: 0,
@@ -115,7 +118,7 @@ function SummaryPanel({ summary, structuredSummary, isGenerating, onGenerate, ha
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px'
                 }}>
-                  Decisions
+                  {t('summary.decisions')}
                 </div>
                 <ul style={{
                   margin: 0,
@@ -147,8 +150,8 @@ function SummaryPanel({ summary, structuredSummary, isGenerating, onGenerate, ha
             </svg>
             <div className="empty-text">
               {hasTranscripts
-                ? 'Click "Generate" to create summary'
-                : 'Start meeting to generate summary'}
+                ? t('summary.empty_has_transcripts')
+                : t('summary.empty_no_transcripts')}
             </div>
           </div>
         )}
