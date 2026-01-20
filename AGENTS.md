@@ -30,6 +30,9 @@
 - Keep PRs scoped; include what changed, why, screenshots for UI tweaks, and steps to verify.
 - Ensure `npm test` passes and builds succeed before requesting review.
 
+## AI Agent Guidelines
+- **Documentation Retrieval**: Use the **Context7 MCP** (`use context7`) to fetch up-to-date documentation and code examples for libraries and APIs used in this project (e.g., React, Vite, Electron, Vitest).
+
 ## Configuration & Security Tips
 - Avoid editing `dist/`; regenerate via builds. Keep API keys stored via app settings or env vars, not in source.
 
