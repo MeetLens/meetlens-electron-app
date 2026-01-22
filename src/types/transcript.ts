@@ -1,4 +1,5 @@
 export interface TranscriptEntry {
+  id: string;
   timestamp: string;
   text: string;
   translation?: string;

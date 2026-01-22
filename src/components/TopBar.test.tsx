@@ -1,18 +1,23 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import i18n from '../i18n/config';
 import TopBar from './TopBar';
 
 describe('TopBar', () => {
+  beforeEach(async () => {
+    localStorage.setItem('i18nextLng', 'en');
+    await i18n.changeLanguage('en');
+  });
+
   const defaultProps = {
     isRecording: false,
     isConnected: false,
     onStartStop: vi.fn(),
-    elevenLabsApiKey: 'eleven-key',
-    deeplApiKey: 'deepl-key',
-    selectedLanguage: 'en',
-    onSaveApiKeys: vi.fn(),
-    onLanguageChange: vi.fn(),
+    translationLanguage: 'en',
+    onTranslationLanguageChange: vi.fn(),
+    appLanguage: 'en',
+    onAppLanguageChange: vi.fn(),
   };
 
   it('renders start/stop button and toggles label based on recording state', () => {
@@ -27,36 +32,37 @@ describe('TopBar', () => {
     expect(screen.getByText(/connected/i)).toBeInTheDocument();
   });
 
-  it('opens settings, saves API keys, and handles language change', async () => {
+  it('opens settings and handles language changes', async () => {
     const user = userEvent.setup();
-    const onSaveApiKeys = vi.fn();
-    const onLanguageChange = vi.fn();
+    const onTranslationLanguageChange = vi.fn();
+    const onAppLanguageChange = vi.fn();
 
     render(
       <TopBar
         {...defaultProps}
-        onSaveApiKeys={onSaveApiKeys}
-        onLanguageChange={onLanguageChange}
+        onTranslationLanguageChange={onTranslationLanguageChange}
+        onAppLanguageChange={onAppLanguageChange}
       />
     );
 
     await user.click(screen.getByRole('button', { name: /settings/i }));
 
-    const elevenInput = await screen.findByLabelText(/elevenlabs api key/i);
-    const deeplInput = screen.getByLabelText(/deepl api key/i);
-    const languageSelect = screen.getByLabelText(/translation language/i);
+    const appLanguageSelect = await screen.findByLabelText(/app language/i);
+    const translationLanguageSelect = screen.getByLabelText(/translation language/i);
 
-    await user.clear(elevenInput);
-    await user.type(elevenInput, 'new-eleven');
-    await user.clear(deeplInput);
-    await user.type(deeplInput, 'new-deepl');
+    await user.selectOptions(translationLanguageSelect, 'tr');
+    expect(onTranslationLanguageChange).toHaveBeenCalledWith('tr');
 
-    await user.selectOptions(languageSelect, 'tr');
-    expect(onLanguageChange).toHaveBeenCalledWith('tr');
+    await user.selectOptions(appLanguageSelect, 'de');
+    expect(onAppLanguageChange).toHaveBeenCalledWith('de');
 
-    await user.click(screen.getByRole('button', { name: /save settings/i }));
+    const saveButton = await screen.findByRole('button', {
+      name: /save settings|einstellungen speichern/i,
+    });
+    await user.click(saveButton);
 
-    expect(onSaveApiKeys).toHaveBeenCalledWith('new-eleven', 'new-deepl');
-    expect(screen.queryByText(/api settings/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: /application settings|anwendungseinstellungen/i }),
+    ).not.toBeInTheDocument();
   });
 });

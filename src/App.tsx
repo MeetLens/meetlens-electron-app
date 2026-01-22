@@ -46,6 +46,7 @@ function App() {
     saveTranscript,
     onGenerateSummary: (transcripts) =>
       generateMeetingSummary(transcripts, translationLanguage),
+    translationLanguage,
   });
 
   const handleGenerateSummary = useCallback(async () => {

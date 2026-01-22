@@ -361,6 +361,10 @@ input, select, textarea {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
 }
 
+.transcript-entry--virtualized {
+  margin-bottom: 0;
+}
+
 .transcript-entry--latest {
   animation: slideIn 0.3s ease-out;
 }

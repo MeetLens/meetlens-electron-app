@@ -17,6 +17,7 @@ interface UseTranscriptionOptions {
     translation?: string
   ) => Promise<void>;
   onGenerateSummary?: (transcripts: TranscriptEntry[]) => void;
+  translationLanguage: string;
 }
 
 interface UseTranscriptionResult {
@@ -48,6 +49,7 @@ function useTranscription({
   createMeeting,
   saveTranscript,
   onGenerateSummary,
+  translationLanguage,
 }: UseTranscriptionOptions): UseTranscriptionResult {
   const { t } = useTranslation();
   const [transcriptsByMeeting, setTranscriptsByMeeting] =
@@ -66,6 +68,12 @@ function useTranscription({
   const stableTranslationRef = useRef('');
   const partialTranslationRef = useRef('');
   const partialTranscriptRef = useRef('');
+  const sessionTimestampRef = useRef<Record<string, string>>({});
+  // Fix Issue 1: Track latest stable transcript per session to avoid race condition
+  const latestStableTranscriptRef = useRef<Record<string, { text: string; timestamp: string }>>({});
+  const latestTranslationBySessionRef = useRef<Record<string, string>>({});
+  // Fix Issue 2: Track which sessions have been persisted to prevent duplicate writes
+  const persistedSessionsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     currentMeetingRef.current = currentMeeting;
@@ -87,6 +95,7 @@ function useTranscription({
   const loadTranscripts = useCallback(async (meetingId: number) => {
     const loadedTranscripts = await fetchTranscripts(meetingId);
     const formatted = loadedTranscripts.map((transcript) => ({
+      id: `db:${transcript.id}`,
       timestamp: transcript.timestamp,
       text: transcript.text,
       translation: transcript.translation || undefined,
@@ -127,8 +136,11 @@ function useTranscription({
       const existingIndex = meetingTranscripts.findIndex((entry) => entry.sessionId === sessionId);
 
       if (existingIndex === -1) {
+        const sessionTimestamp = sessionTimestampRef.current[sessionId] || formatTimestamp();
+        sessionTimestampRef.current[sessionId] = sessionTimestamp;
         const baseEntry: TranscriptEntry = {
-          timestamp: formatTimestamp(),
+          id: `session:${sessionId}`,
+          timestamp: sessionTimestamp,
           text: '',
           translation: undefined,
           sessionId,
@@ -249,21 +261,69 @@ function useTranscription({
       return;
     }
 
-    upsertTranscriptEntry(recordingMeetingId, sessionId, (entry) => {
-      const nextText = fullText
-        ? cleanedText
-        : [entry.text, cleanedText].filter(Boolean).join(' ').trim();
+    // Use a consistent per-session timestamp for persistence updates
+    const sessionTimestamp =
+      sessionTimestampRef.current[sessionId] || formatTimestamp();
+    sessionTimestampRef.current[sessionId] = sessionTimestamp;
 
-      return {
-        ...entry,
-        text: nextText,
-        translation: entry.translation,
-        sessionId,
-      };
-    });
+    const previousText = fullText
+      ? ''
+      : latestStableTranscriptRef.current[sessionId]?.text || '';
+    const nextText = fullText
+      ? cleanedText
+      : [previousText, cleanedText].filter(Boolean).join(' ').trim();
+    const translationForSave = latestTranslationBySessionRef.current[sessionId];
+    const normalizedTranslation = translationForSave?.trim()
+      ? translationForSave.trim()
+      : undefined;
+
+    upsertTranscriptEntry(recordingMeetingId, sessionId, (entry) => ({
+      ...entry,
+      text: nextText,
+      sessionId,
+      timestamp: sessionTimestamp,
+    }));
 
     resetTranscriptPreview();
-  }, [resetTranscriptPreview, upsertTranscriptEntry]);
+
+    // Immediately persist to database (fire-and-forget to prevent data loss on crash)
+    if (nextText) {
+      // Fix Issue 1: Store latest stable transcript in ref for translation handler
+      latestStableTranscriptRef.current[sessionId] = {
+        text: nextText,
+        timestamp: sessionTimestamp,
+      };
+
+      console.log('[transcription] Attempting to save stable transcript to database:', {
+        meetingId: recordingMeetingId,
+        timestamp: sessionTimestamp,
+        textLength: nextText.length,
+        hasTranslation: !!normalizedTranslation,
+        textPreview: nextText.substring(0, 50) + '...',
+      });
+
+      // Fix Issue 2: Mark session as persisted after saving
+      saveTranscript(
+        recordingMeetingId,
+        sessionTimestamp,
+        nextText,
+        normalizedTranslation
+      ).then(() => {
+        console.log('[transcription] ✓ Successfully saved stable transcript to database:', {
+          meetingId: recordingMeetingId,
+          timestamp: sessionTimestamp,
+        });
+        persistedSessionsRef.current.add(sessionId);
+      }).catch((error) => {
+        console.error('[transcription] ✗ Failed to persist stable transcript:', {
+          meetingId: recordingMeetingId,
+          timestamp: sessionTimestamp,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        });
+      });
+    }
+  }, [resetTranscriptPreview, upsertTranscriptEntry, saveTranscript]);
 
   const handleTranslationPartialWithMeeting = useCallback((
     translation: string,
@@ -318,12 +378,14 @@ function useTranscription({
     }
 
     const trimmedTranslation = translation.trim();
+    const nextTranslation = [stableTranslationRef.current, trimmedTranslation]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
 
-    setStableTranslation((prev) => {
-      const next = [prev, trimmedTranslation].filter(Boolean).join(' ').trim();
-      stableTranslationRef.current = next;
-      return next;
-    });
+    stableTranslationRef.current = nextTranslation;
+    latestTranslationBySessionRef.current[sessionId] = nextTranslation;
+    setStableTranslation(nextTranslation);
 
     partialTranslationRef.current = '';
     setPartialTranslation('');
@@ -331,9 +393,41 @@ function useTranscription({
     updateTranscriptTranslationForSession(
       recordingMeetingId,
       sessionId,
-      stableTranslationRef.current
+      nextTranslation
     );
-  }, [updateTranscriptTranslationForSession]);
+
+    // Fix Issue 1: Read from latestStableTranscriptRef instead of state to avoid race condition
+    // Immediately persist the updated translation to database
+    const latestTranscript = latestStableTranscriptRef.current[sessionId];
+
+    if (latestTranscript?.text) {
+      console.log('[translation] Attempting to save translation update to database:', {
+        meetingId: recordingMeetingId,
+        timestamp: latestTranscript.timestamp,
+        translationLength: nextTranslation.length,
+        translationPreview: nextTranslation.substring(0, 50) + '...',
+      });
+
+      saveTranscript(
+        recordingMeetingId,
+        latestTranscript.timestamp,
+        latestTranscript.text,
+        nextTranslation
+      ).then(() => {
+        console.log('[translation] ✓ Successfully saved translation to database:', {
+          meetingId: recordingMeetingId,
+          timestamp: latestTranscript.timestamp,
+        });
+      }).catch((error) => {
+        console.error('[translation] ✗ Failed to persist translation:', {
+          meetingId: recordingMeetingId,
+          timestamp: latestTranscript.timestamp,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        });
+      });
+    }
+  }, [updateTranscriptTranslationForSession, saveTranscript]);
 
   const stopRecording = useCallback(async () => {
     const sessionId = currentSessionIdRef.current;
@@ -349,28 +443,36 @@ function useTranscription({
       backendTranscriptionServiceRef.current = null;
     }
 
+    // NOTE: Individual transcripts are now persisted immediately in handleTranscriptStableWithMeeting
+    // and handleTranslationStableWithMeeting to prevent data loss on crashes.
+    // This section only handles final session cleanup and summary generation.
+
     if (recordingMeetingId && sessionId) {
       const sessionTranscripts = transcriptsByMeeting[recordingMeetingId] || [];
       const sessionBubble = sessionTranscripts.find((entry) => entry.sessionId === sessionId);
-      const transcriptText =
-        sessionBubble?.text && sessionBubble.text.trim().length > 0
-          ? sessionBubble.text
-          : partialTranscriptRef.current;
-      const normalizedTranscriptText = transcriptText?.trim();
 
-      const translationSource = sessionBubble?.translation || stableTranslationRef.current;
-      const combinedTranslation =
-        translationSource && translationSource.trim().length > 0
-          ? translationSource
-          : partialTranslationRef.current;
-      const translationToPersist = combinedTranslation?.trim() || undefined;
-      const timestampForSave = sessionBubble?.timestamp || formatTimestamp();
+      // Fix Issue 2: Check if session has already been persisted to prevent duplicate writes
+      const hasUnsavedPartialTranscript =
+        partialTranscriptRef.current &&
+        (!sessionBubble?.text || sessionBubble.text.trim().length === 0) &&
+        !persistedSessionsRef.current.has(sessionId);
 
-      if (normalizedTranscriptText) {
+      if (hasUnsavedPartialTranscript) {
+        const normalizedTranscriptText = partialTranscriptRef.current.trim();
+        const translationToPersist = (
+          sessionBubble?.translation ||
+          stableTranslationRef.current ||
+          partialTranslationRef.current
+        )?.trim() || undefined;
+        const timestampForSave =
+          sessionTimestampRef.current[sessionId] || formatTimestamp();
+        sessionTimestampRef.current[sessionId] = timestampForSave;
+
         console.log(
-          '[transcription] Saving session transcript to database:',
+          '[transcription] Saving final partial transcript to database:',
           normalizedTranscriptText.substring(0, 50) + '...'
         );
+
         upsertTranscriptEntry(recordingMeetingId, sessionId, (entry) => ({
           ...entry,
           text: normalizedTranscriptText,
@@ -385,6 +487,9 @@ function useTranscription({
           normalizedTranscriptText,
           translationToPersist
         );
+
+        // Fix Issue 2: Mark session as persisted after saving
+        persistedSessionsRef.current.add(sessionId);
       }
     }
 
@@ -393,6 +498,14 @@ function useTranscription({
 
     resetTranscriptPreview();
     resetTranslationState();
+
+    // Fix Issue 1 & 2: Clean up session tracking refs
+    if (sessionId) {
+      delete latestStableTranscriptRef.current[sessionId];
+      persistedSessionsRef.current.delete(sessionId);
+      delete sessionTimestampRef.current[sessionId];
+      delete latestTranslationBySessionRef.current[sessionId];
+    }
 
     currentSessionIdRef.current = null;
     recordingMeetingIdRef.current = null;
@@ -438,6 +551,7 @@ function useTranscription({
         ? crypto.randomUUID()
         : `session-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     currentSessionIdRef.current = newSessionId;
+    sessionTimestampRef.current[newSessionId] = formatTimestamp();
     recordingMeetingIdRef.current = activeMeeting?.id ?? null;
     resetTranscriptPreview();
     resetTranslationState();
@@ -446,7 +560,8 @@ function useTranscription({
       audioServiceRef.current = new AudioCaptureService();
 
       backendTranscriptionServiceRef.current = new BackendTranscriptionService(
-        newSessionId
+        newSessionId,
+        translationLanguage
       );
 
       const connected = await backendTranscriptionServiceRef.current.connect(
@@ -524,6 +639,7 @@ function useTranscription({
     resetTranslationState,
     stopRecording,
     t,
+    translationLanguage,
   ]);
 
   const handleStartStop = useCallback(() => {

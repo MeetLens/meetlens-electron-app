@@ -9,6 +9,7 @@ import {
 } from 'electron';
 import path from 'path';
 import Database from 'better-sqlite3';
+import { runMigrations } from './migrations';
 
 let mainWindow: BrowserWindow | null = null;
 let db: Database | undefined;
@@ -22,45 +23,7 @@ app.commandLine.appendSwitch('enable-features', 'MacLoopbackAudioForScreenShare'
 export function createDatabase() {
   const dbPath = path.join(app.getPath('userData'), 'meetlens.db');
   db = new Database(dbPath);
-
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS meetings (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL,
-      summary TEXT,
-      full_transcript TEXT
-    );
-
-    CREATE TABLE IF NOT EXISTS transcripts (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      meeting_id INTEGER NOT NULL,
-      timestamp TEXT NOT NULL,
-      text TEXT NOT NULL,
-      translation TEXT,
-      FOREIGN KEY (meeting_id) REFERENCES meetings(id) ON DELETE CASCADE
-    );
-  `);
-
-  // Migration: Add summary and full_transcript columns if they don't exist
-  try {
-    db.exec('ALTER TABLE meetings ADD COLUMN summary TEXT');
-  } catch (error: any) {
-    // Column already exists, ignore
-    if (!error.message.includes('duplicate column name')) {
-      console.error('Error adding summary column:', error);
-    }
-  }
-
-  try {
-    db.exec('ALTER TABLE meetings ADD COLUMN full_transcript TEXT');
-  } catch (error: any) {
-    // Column already exists, ignore
-    if (!error.message.includes('duplicate column name')) {
-      console.error('Error adding full_transcript column:', error);
-    }
-  }
+  runMigrations(db);
 
   return db;
 }
@@ -237,15 +200,45 @@ export function registerIpcHandlers(database: Database) {
     text: string,
     translation?: string,
   ) => {
-    const stmt = database.prepare(
-      'INSERT INTO transcripts (meeting_id, timestamp, text, translation) VALUES (?, ?, ?, ?)'
-    );
-    const result = stmt.run(meetingId, timestamp, text, translation || null);
+    console.log('[IPC/save-transcript] Received request:', {
+      meetingId,
+      timestamp,
+      textLength: text.length,
+      hasTranslation: !!translation,
+      textPreview: text.substring(0, 50) + '...',
+    });
 
-    const updateStmt = database.prepare('UPDATE meetings SET updated_at = ? WHERE id = ?');
-    updateStmt.run(new Date().toISOString(), meetingId);
+    try {
+      // Fix Issue 3: Use INSERT OR REPLACE to handle translation updates without duplicates
+      // This ensures translation updates modify existing rows instead of creating duplicates
+      const stmt = database.prepare(`
+        INSERT INTO transcripts (meeting_id, timestamp, text, translation)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(meeting_id, timestamp)
+        DO UPDATE SET
+          text = excluded.text,
+          translation = excluded.translation
+      `);
+      const result = stmt.run(meetingId, timestamp, text, translation || null);
 
-    return { id: result.lastInsertRowid };
+      console.log('[IPC/save-transcript] SQL executed successfully:', {
+        lastInsertRowid: result.lastInsertRowid,
+      });
+
+      const updateStmt = database.prepare('UPDATE meetings SET updated_at = ? WHERE id = ?');
+      updateStmt.run(new Date().toISOString(), meetingId);
+
+      console.log('[IPC/save-transcript] ✓ Transcript saved successfully');
+
+      return { id: result.lastInsertRowid };
+    } catch (error: any) {
+      console.error('[IPC/save-transcript] ✗ Database error:', {
+        error: error.message,
+        code: error.code,
+        stack: error.stack,
+      });
+      throw error;
+    }
   });
 
   ipcMain.handle('get-transcripts', async (_event: IpcMainInvokeEvent, meetingId: number) => {

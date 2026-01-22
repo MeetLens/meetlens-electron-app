@@ -17,15 +17,20 @@ Database schema updates are currently handled via manual `try-catch` blocks and 
   PRAGMA user_version = 2; -- Set new version
   ```
 
+## Implementation Notes
+- Added `electron/migrations.ts` with ordered migrations and a transaction-wrapped runner.
+- `createDatabase` now calls `runMigrations` to apply versions 1-3 sequentially.
+- Existing `meetings` and `transcripts` data is preserved via additive/checked schema changes.
+
 ## Priority
 🟡 Medium - Important for long-term stability as the data model evolves.
 
 ## Status
-Pending
+Done
 
 ## Acceptance Criteria
-- [ ] Manual `try-catch` migration blocks are removed from `main.ts`.
-- [ ] A migration runner is implemented that handles upgrading from version 0 to the latest version.
-- [ ] Migrations are wrapped in transactions to prevent database corruption on failure.
-- [ ] Adding a new column in the future only requires adding a new migration script to the sequence.
-- [ ] Existing data in `meetings` and `transcripts` tables is preserved during the transition to the new system.
+- [x] Manual `try-catch` migration blocks are removed from `main.ts`.
+- [x] A migration runner is implemented that handles upgrading from version 0 to the latest version.
+- [x] Migrations are wrapped in transactions to prevent database corruption on failure.
+- [x] Adding a new column in the future only requires adding a new migration script to the sequence.
+- [x] Existing data in `meetings` and `transcripts` tables is preserved during the transition to the new system.

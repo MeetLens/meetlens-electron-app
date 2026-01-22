@@ -139,6 +139,7 @@ function useMeetings(): UseMeetingsResult {
 
     try {
       const fullTranscript = transcripts.map((entry) => entry.text).join(' ');
+      const languageParam = translationLanguage?.trim() || null;
 
       if (!backendSummaryServiceRef.current) {
         backendSummaryServiceRef.current = new BackendSummaryService();
@@ -147,7 +148,7 @@ function useMeetings(): UseMeetingsResult {
       const summaryResponse = await backendSummaryServiceRef.current.generateSummary(
         currentMeeting.id.toString(),
         fullTranscript,
-        translationLanguage
+        languageParam
       );
 
       const formattedSummary =

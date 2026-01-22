@@ -125,6 +125,12 @@ For detailed architecture information, see [docs/ARCHITECTURE.md](docs/ARCHITECT
 - Ensure target language is correctly selected in Settings
 - Verify internet connection
 
+### Transcripts Not Persisting
+- Check browser console for error logs
+- Verify database integrity with `scripts/check-database.sh`
+- See [docs/troubleshooting/transcript-persistence-not-working.md](docs/troubleshooting/transcript-persistence-not-working.md)
+- Console log reference: [docs/troubleshooting/console-log-reference.md](docs/troubleshooting/console-log-reference.md)
+
 For more help, see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
 
 ## Contributing

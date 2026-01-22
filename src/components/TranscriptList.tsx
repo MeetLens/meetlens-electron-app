@@ -92,7 +92,7 @@ function TranscriptList({
         <>
           {transcripts.map((entry, index) => (
             <div
-              key={entry.sessionId || entry.index}
+              key={entry.id}
               className={`transcript-entry ${
                 index === transcripts.length - 1 ? 'transcript-entry--latest' : ''
               }`}

@@ -36,6 +36,9 @@ const electronMocks = vi.hoisted(() => {
     on: vi.fn(),
     getPath: vi.fn(() => '/tmp/userData'),
     quit: vi.fn(),
+    commandLine: {
+      appendSwitch: vi.fn(),
+    },
   };
 
   mocks.ipcMainMock = {
@@ -62,10 +65,35 @@ const sqliteMocks = vi.hoisted(() => {
   const getMock = vi.fn();
   const prepareMock = vi.fn(() => ({ run: runMock, all: allMock, get: getMock }));
   const execMock = vi.fn();
+  const pragmaMock = vi.fn((pragma: string) => {
+    if (pragma === 'user_version') {
+      return 0;
+    }
+    return [];
+  });
+  const transactionMock = vi.fn((fn: (...args: any[]) => unknown) => {
+    return (...args: any[]) => fn(...args);
+  });
   const closeMock = vi.fn();
-  const DatabaseMock = vi.fn(() => ({ exec: execMock, prepare: prepareMock, close: closeMock }));
+  const DatabaseMock = vi.fn(() => ({
+    exec: execMock,
+    prepare: prepareMock,
+    pragma: pragmaMock,
+    transaction: transactionMock,
+    close: closeMock,
+  }));
 
-  return { runMock, allMock, getMock, prepareMock, execMock, closeMock, DatabaseMock };
+  return {
+    runMock,
+    allMock,
+    getMock,
+    prepareMock,
+    execMock,
+    pragmaMock,
+    transactionMock,
+    closeMock,
+    DatabaseMock,
+  };
 });
 
 vi.mock('better-sqlite3', () => ({
@@ -109,7 +137,7 @@ describe('electron main process helpers', () => {
     createWindow();
 
     expect(electronMocks.loadFileMock).toHaveBeenCalledWith(
-      path.join(__dirname, '../renderer/index.html'),
+      path.join(__dirname, 'renderer', 'index.html'),
     );
     expect(electronMocks.loadURLMock).not.toHaveBeenCalled();
     expect(electronMocks.openDevToolsMock).not.toHaveBeenCalled();

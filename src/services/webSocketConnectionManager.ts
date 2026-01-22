@@ -10,6 +10,7 @@ export interface ConnectionCallbacks {
 export interface ConnectionSession {
   sessionId: string;
   callbacks: ConnectionCallbacks;
+  wsUrl: string;
 }
 
 export class WebSocketConnectionManager {
@@ -48,7 +49,7 @@ export class WebSocketConnectionManager {
       const existingConnection = this.connections.get(sessionId)!;
       if (existingConnection.readyState === WebSocket.OPEN) {
         console.log(`[WebSocketManager] Reusing existing connection for session ${sessionId}`);
-        this.updateSessionCallbacks(sessionId, callbacks);
+        this.updateSessionCallbacks(sessionId, callbacks, wsUrl);
         return existingConnection;
       } else {
         // Clean up stale connection
@@ -57,7 +58,7 @@ export class WebSocketConnectionManager {
     }
 
     // Try to get an available warm connection
-    const warmConnectionId = this.getAvailableConnection();
+    const warmConnectionId = this.getAvailableConnection(wsUrl);
     if (warmConnectionId) {
       console.log(`[WebSocketManager] Reusing warm connection ${warmConnectionId} for session ${sessionId}`);
       const connection = this.connections.get(warmConnectionId)!;
@@ -65,7 +66,7 @@ export class WebSocketConnectionManager {
 
       // Update session mapping
       this.connections.set(sessionId, connection);
-      this.sessionMap.set(sessionId, { sessionId, callbacks });
+      this.sessionMap.set(sessionId, { sessionId, callbacks, wsUrl });
       this.connections.delete(warmConnectionId);
       this.sessionMap.delete(warmConnectionId);
 
@@ -209,9 +210,10 @@ export class WebSocketConnectionManager {
         const connection = new WebSocket(wsUrl);
         // Track connection creation time for uptime monitoring
         (connection as any)._connectionStartTime = Date.now();
+        (connection as any)._wsUrl = wsUrl;
 
         this.connections.set(sessionId, connection);
-        this.sessionMap.set(sessionId, { sessionId, callbacks });
+        this.sessionMap.set(sessionId, { sessionId, callbacks, wsUrl });
 
         // Set up event handlers
         this.updateConnectionHandlers(connection, sessionId, callbacks);
@@ -324,12 +326,13 @@ export class WebSocketConnectionManager {
       }
 
       console.log(`[WebSocketManager] Reconnecting session ${sessionId}`);
+      const wsUrl = this.getConnectionUrl(sessionId);
 
       // Remove the old connection
       this.forceCloseConnection(sessionId);
 
       // Create new connection
-      const connection = await this.createNewConnection(sessionId, callbacks, this.getConnectionUrl(sessionId));
+      const connection = await this.createNewConnection(sessionId, callbacks, wsUrl);
       console.log(`[WebSocketManager] Successfully reconnected session ${sessionId}`);
 
       // Reset reconnection attempts on success
@@ -345,9 +348,8 @@ export class WebSocketConnectionManager {
    * Get the WebSocket URL for a session (stored in session data)
    */
   private getConnectionUrl(sessionId: string): string {
-    // For now, return default URL since we don't store per-session URLs
-    // This could be enhanced to store URL per session if needed
-    return TRANSCRIPTION_WS_URL;
+    const session = this.sessionMap.get(sessionId);
+    return session?.wsUrl || TRANSCRIPTION_WS_URL;
   }
 
   /**
@@ -363,10 +365,15 @@ export class WebSocketConnectionManager {
   /**
    * Update callbacks for an existing session
    */
-  private updateSessionCallbacks(sessionId: string, callbacks: ConnectionCallbacks): void {
+  private updateSessionCallbacks(
+    sessionId: string,
+    callbacks: ConnectionCallbacks,
+    wsUrl: string = TRANSCRIPTION_WS_URL
+  ): void {
     const session = this.sessionMap.get(sessionId);
     if (session) {
       session.callbacks = callbacks;
+      session.wsUrl = wsUrl;
       const connection = this.connections.get(sessionId);
       if (connection) {
         this.updateConnectionHandlers(connection, sessionId, callbacks);
@@ -377,9 +384,18 @@ export class WebSocketConnectionManager {
   /**
    * Get an available warm connection ID
    */
-  private getAvailableConnection(): string | null {
-    const available = Array.from(this.availableConnections);
-    return available.length > 0 ? available[0] : null;
+  private getAvailableConnection(wsUrl: string): string | null {
+    for (const sessionId of this.availableConnections) {
+      const connection = this.connections.get(sessionId);
+      if (!connection) {
+        continue;
+      }
+      const connectionUrl = (connection as any)._wsUrl as string | undefined;
+      if (!connectionUrl || connectionUrl === wsUrl) {
+        return sessionId;
+      }
+    }
+    return null;
   }
 
   /**

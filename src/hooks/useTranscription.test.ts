@@ -40,6 +40,7 @@ describe('useTranscription', () => {
         fetchTranscripts,
         createMeeting: vi.fn().mockResolvedValue(meeting),
         saveTranscript: vi.fn(),
+        translationLanguage: 'en',
       })
     );
 

@@ -8,6 +8,7 @@ export interface AudioChunkMessage {
   chunk_id: number;
   data: string; // base64 encoded audio
   audio_format: string; // e.g., 'webm', 'opus', etc.
+  target_lang?: string;
 }
 
 export interface EndSessionMessage {
@@ -64,6 +65,7 @@ export class BackendTranscriptionService {
   private ws: WebSocket | null = null;
   private sessionId: string;
   private wsUrl: string;
+  private targetLanguage: string | null;
   private chunkIdCounter = 1;
   private audioContext: AudioContext | null = null;
   private workletNode: AudioWorkletNode | null = null;
@@ -89,9 +91,14 @@ export class BackendTranscriptionService {
   private onErrorCallback: ((error: string) => void) | null = null;
   private onConnectionCallback: ((connected: boolean) => void) | null = null;
 
-  constructor(sessionId: string, wsUrl: string = TRANSCRIPTION_WS_URL) {
+  constructor(
+    sessionId: string,
+    targetLanguage: string | null = null,
+    wsUrl: string = TRANSCRIPTION_WS_URL
+  ) {
     this.sessionId = sessionId;
     this.wsUrl = wsUrl;
+    this.targetLanguage = targetLanguage;
     this.connectionManager = WebSocketConnectionManager.getInstance();
   }
 
@@ -159,7 +166,7 @@ export class BackendTranscriptionService {
       this.ws = await this.connectionManager.acquireConnection(
         this.sessionId,
         connectionCallbacks,
-        this.wsUrl
+        this.getWebSocketUrl()
       );
 
       return true;
@@ -172,6 +179,22 @@ export class BackendTranscriptionService {
         this.onConnectionCallback(false);
       }
       throw error;
+    }
+  }
+
+  private getWebSocketUrl(): string {
+    const targetLang = this.targetLanguage?.trim();
+    if (!targetLang) {
+      return this.wsUrl;
+    }
+
+    try {
+      const url = new URL(this.wsUrl);
+      url.searchParams.set('target_lang', targetLang);
+      return url.toString();
+    } catch (error) {
+      console.warn('[BackendTranscription] Failed to append target_lang to ws URL:', error);
+      return this.wsUrl;
     }
   }
 
@@ -337,6 +360,7 @@ export class BackendTranscriptionService {
             chunk_id: this.chunkIdCounter++,
             data: base64,
             audio_format: BACKEND_AUDIO_FORMAT,
+            target_lang: this.targetLanguage?.trim() || undefined,
           };
 
           this.ws.send(JSON.stringify(message));

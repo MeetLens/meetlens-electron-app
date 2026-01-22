@@ -31,6 +31,8 @@ declare module 'better-sqlite3' {
     constructor(path: string);
     exec: (sql: string) => void;
     prepare: (sql: string) => Database.Statement;
+    pragma: (sql: string, options?: { simple?: boolean }) => any;
+    transaction: <T extends (...params: any[]) => any>(fn: T) => T;
     close: () => void;
   }
 }

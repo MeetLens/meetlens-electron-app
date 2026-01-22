@@ -32,6 +32,20 @@
 
 ## AI Agent Guidelines
 - **Documentation Retrieval**: Use the **Context7 MCP** (`use context7`) to fetch up-to-date documentation and code examples for libraries and APIs used in this project (e.g., React, Vite, Electron, Vitest).
+- **Installed Local Agents**: The following agents are installed from `../meetlens/.claude/agents` into `~/.codex/skills/<agent>/SKILL.md`:
+  - api-designer
+  - api-documenter
+  - backend-developer
+  - code-reviewer
+  - context-manager
+  - documentation-engineer
+  - electron-pro
+  - fullstack-developer
+  - llm-architect
+  - multi-agent-coordinator
+  - prompt-engineer
+  - react-electron-engineer
+  - websocket-engineer
 
 ## Configuration & Security Tips
 - Avoid editing `dist/`; regenerate via builds. Keep API keys stored via app settings or env vars, not in source.

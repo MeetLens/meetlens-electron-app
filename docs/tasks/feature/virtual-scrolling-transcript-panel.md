@@ -45,14 +45,14 @@ Users should be able to:
 Medium - Performance enhancement for long meetings
 
 ## Status
-Open
+In Progress
 
 ## Acceptance Criteria
-- [ ] react-window installed as dependency
-- [ ] TranscriptPanel uses FixedSizeList or VariableSizeList component
-- [ ] All transcript entries render correctly with timestamps and text
-- [ ] Auto-scrolling works during live recording
+- [x] react-window installed as dependency
+- [x] TranscriptPanel uses FixedSizeList or VariableSizeList component
+- [x] All transcript entries render correctly with timestamps and text
+- [x] Auto-scrolling works during live recording
 - [ ] Performance tested with 1000+ transcript entries
 - [ ] No visual regressions in styling/layout
 - [ ] Memory usage optimized for large transcripts
-- [ ] Existing functionality (clear button, empty states) preserved
+- [x] Existing functionality (clear button, empty states) preserved
