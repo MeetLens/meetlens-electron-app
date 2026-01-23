@@ -89,11 +89,11 @@ function TranscriptList({
           {transcripts.map((entry, index) => {
             const isActiveSessionBubble =
               isRecording &&
-              Boolean(entry.sessionId) &&
+              entry.sessionId &&
               entry.sessionId === activeSessionId;
             const showTranslation =
-              Boolean(entry.translation) ||
-              (isActiveSessionBubble && Boolean(stableTranslation || partialTranslation));
+              !!entry.translation ||
+              (isActiveSessionBubble && !!(stableTranslation || partialTranslation));
 
             return (
               <div
