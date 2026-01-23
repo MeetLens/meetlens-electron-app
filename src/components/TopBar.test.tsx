@@ -13,6 +13,8 @@ describe('TopBar', () => {
   const defaultProps = {
     isRecording: false,
     isConnected: false,
+    isOnline: true,
+    backendReachable: true,
     onStartStop: vi.fn(),
     translationLanguage: 'en',
     onTranslationLanguageChange: vi.fn(),
@@ -30,6 +32,31 @@ describe('TopBar', () => {
 
     expect(screen.getByRole('button', { name: /stop meeting/i })).toBeInTheDocument();
     expect(screen.getByText(/connected/i)).toBeInTheDocument();
+  });
+
+  it('shows offline status and disables start when offline', () => {
+    render(
+      <TopBar
+        {...defaultProps}
+        isOnline={false}
+        backendReachable={false}
+      />
+    );
+
+    const startButton = screen.getByRole('button', { name: /start meeting/i });
+    expect(startButton).toBeDisabled();
+    expect(screen.getByText(/offline/i)).toBeInTheDocument();
+  });
+
+  it('shows backend unavailable when backend is unreachable', () => {
+    render(
+      <TopBar
+        {...defaultProps}
+        backendReachable={false}
+      />
+    );
+
+    expect(screen.getByText(/backend unavailable/i)).toBeInTheDocument();
   });
 
   it('opens settings and handles language changes', async () => {

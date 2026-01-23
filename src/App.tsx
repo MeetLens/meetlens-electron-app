@@ -6,12 +6,14 @@ import TopBar from './components/TopBar';
 import Sidebar from './components/Sidebar';
 import TranscriptList from './components/TranscriptList';
 import useMeetings from './hooks/useMeetings';
+import useNetworkStatus from './hooks/useNetworkStatus';
 import useTranscription from './hooks/useTranscription';
 
 function App() {
   const { t, i18n } = useTranslation();
   const [appLanguage, setAppLanguage] = useState(i18n.language || 'tr');
   const [translationLanguage, setTranslationLanguage] = useState('tr');
+  const { isOnline, backendReachable } = useNetworkStatus();
 
   const {
     meetings,
@@ -96,6 +98,8 @@ function App() {
         <TopBar
           isRecording={isRecording}
           isConnected={isConnected}
+          isOnline={isOnline}
+          backendReachable={backendReachable}
           onStartStop={handleStartStop}
           translationLanguage={translationLanguage}
           onTranslationLanguageChange={setTranslationLanguage}
