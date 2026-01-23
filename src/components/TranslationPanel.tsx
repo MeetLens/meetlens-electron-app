@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { Globe } from 'lucide-react';
 import { TRANSLATION_LANGUAGES } from '../i18n/config';
 
 interface TranscriptEntry {
@@ -48,7 +49,7 @@ function TranslationPanel({
       <div className="translation-container" ref={containerRef}>
         {transcripts.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-icon">🌐</div>
+            <div className="empty-icon"><Globe size={48} /></div>
             <div className="empty-text">Translations will appear here</div>
           </div>
         ) : (

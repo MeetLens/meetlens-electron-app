@@ -1,5 +1,6 @@
 import { useState, memo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Play, Square, Settings } from 'lucide-react';
 import { SUPPORTED_APP_LANGUAGES, TRANSLATION_LANGUAGES } from '../i18n/config';
 
 interface TopBarProps {
@@ -45,13 +46,11 @@ function TopBar({
             className={`record-button ${isRecording ? 'stop' : 'start'}`}
             onClick={onStartStop}
           >
-            <svg className="record-icon" viewBox="0 0 24 24" fill="currentColor">
-              {isRecording ? (
-                <rect x="6" y="6" width="12" height="12" />
-              ) : (
-                <polygon points="8,5 19,12 8,19" />
-              )}
-            </svg>
+            {isRecording ? (
+              <Square className="record-icon" size={16} fill="currentColor" />
+            ) : (
+              <Play className="record-icon" size={16} fill="currentColor" />
+            )}
             {isRecording ? t('topbar.stop_meeting') : t('topbar.start_meeting')}
           </button>
         </div>
@@ -63,11 +62,11 @@ function TopBar({
           </div>
 
           <button
-            className="clear-button"
+            className="clear-button clear-button--icon"
             onClick={() => setShowSettings(!showSettings)}
-            style={{ marginLeft: '12px' }}
+            title={t('topbar.settings')}
           >
-            {t('topbar.settings')}
+            <Settings size={16} />
           </button>
         </div>
       </div>

@@ -37,6 +37,8 @@
     "title": "KI-Zusammenfassung",
     "generate": "Generieren",
     "generating": "Generiere...",
+    "collapse": "Einklappen",
+    "expand": "Ausklappen",
     "powered_by": "Unterstützt durch MeetLens KI",
     "overview": "Überblick",
     "action_items": "Aufgaben",

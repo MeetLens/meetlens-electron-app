@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Mic } from 'lucide-react';
 import type { ProcessedTranscriptEntry } from '../types/transcript';
 
 interface TranscriptListProps {
@@ -64,14 +65,7 @@ function TranscriptList({
       {transcripts.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
+            <Mic size={64} />
           </div>
           <div className="empty-text">
             {isRecording ? (
@@ -98,36 +92,46 @@ function TranscriptList({
               }`}
             >
               <div className="transcript-timestamp">{entry.timestamp}</div>
-              <div className="transcript-text">
-                {entry.text}
-                {entry.isActiveSessionBubble && partialTranscript && (
-                  <span className="transcript-partial">
-                    {entry.text ? ' ' : ''}
-                    {partialTranscript}
-                  </span>
+              <div
+                className={`transcript-columns ${
+                  entry.showTranslation ? '' : 'transcript-columns--single'
+                }`}
+              >
+                <div className="transcript-column transcript-column--source">
+                  <div className="transcript-text">
+                    {entry.text}
+                    {entry.isActiveSessionBubble && partialTranscript && (
+                      <span className="transcript-partial">
+                        {entry.text ? ' ' : ''}
+                        {partialTranscript}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {entry.showTranslation && (
+                  <div className="transcript-column transcript-column--translation">
+                    <div className="transcript-translation">
+                      {entry.isActiveSessionBubble ? (
+                        <>
+                          {(stableTranslation || (!partialTranslation && entry.translation)) && (
+                            <span className="translation-stable">
+                              {stableTranslation || entry.translation}
+                            </span>
+                          )}
+                          {partialTranslation && (
+                            <span className="translation-partial">
+                              {stableTranslation ? ' ' : ''}
+                              {partialTranslation}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        entry.translation
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
-              {entry.showTranslation && (
-                <div className="transcript-translation">
-                  {entry.isActiveSessionBubble ? (
-                    <>
-                      {(stableTranslation || (!partialTranslation && entry.translation)) && (
-                        <span className="translation-stable">
-                          {stableTranslation || entry.translation}
-                        </span>
-                      )}
-                      {partialTranslation && (
-                        <span className="translation-partial">
-                          {stableTranslation ? ' ' : ''}
-                          {partialTranslation}
-                        </span>
-                      )}
-                    </>
-                  ) : (
-                    entry.translation
-                  )}
-                </div>
-              )}
             </div>
           ))}
           {isRecording && (

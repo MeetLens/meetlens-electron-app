@@ -37,6 +37,8 @@
     "title": "Yapay Zeka Özeti",
     "generate": "Oluştur",
     "generating": "Oluşturuluyor...",
+    "collapse": "Daralt",
+    "expand": "Genişlet",
     "powered_by": "MeetLens AI tarafından desteklenmektedir",
     "overview": "Genel Bakış",
     "action_items": "Aksiyon Maddeleri",

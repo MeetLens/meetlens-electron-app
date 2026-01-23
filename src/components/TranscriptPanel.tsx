@@ -4,6 +4,7 @@ import {
   VariableSizeList,
   type ListChildComponentProps,
 } from 'react-window';
+import { Mic, Trash2 } from 'lucide-react';
 import type { TranscriptEntry } from '../types/transcript';
 
 const ESTIMATED_ITEM_HEIGHT = 96;
@@ -206,8 +207,8 @@ function TranscriptPanel({ transcripts, onClear, isRecording }: TranscriptPanelP
             </div>
           )}
         </div>
-        <button className="clear-button" onClick={onClear}>
-          {t('transcript.clear')}
+        <button className="clear-button clear-button--icon" onClick={onClear} title={t('transcript.clear')}>
+          <Trash2 size={16} />
         </button>
       </div>
 
@@ -218,7 +219,7 @@ function TranscriptPanel({ transcripts, onClear, isRecording }: TranscriptPanelP
         {transcripts.length === 0 ? (
           <div className="transcript-container">
             <div className="empty-state">
-              <div className="empty-icon">🎙️</div>
+              <div className="empty-icon"><Mic size={48} /></div>
               <div className="empty-text">
                 {isRecording
                   ? t('transcript.empty_listening')

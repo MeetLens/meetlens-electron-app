@@ -1,6 +1,7 @@
 import { Meeting } from '../types/electron';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Plus, Trash2 } from 'lucide-react';
 
 interface SidebarProps {
   meetings: Meeting[];
@@ -30,7 +31,7 @@ function Sidebar({ meetings, currentMeeting, onSelectMeeting, onNewMeeting, onDe
         <div className="sidebar-title">
           <h2>{t('sidebar.title')}</h2>
           <button className="new-meeting-button" onClick={onNewMeeting} title={t('sidebar.new_meeting')}>
-            +
+            <Plus size={16} />
           </button>
         </div>
       </div>
@@ -45,36 +46,22 @@ function Sidebar({ meetings, currentMeeting, onSelectMeeting, onNewMeeting, onDe
             <div
               key={meeting.id}
               className={`meeting-item ${currentMeeting?.id === meeting.id ? 'active' : ''}`}
-              style={{ position: 'relative' }}
             >
-              <div onClick={() => onSelectMeeting(meeting)} style={{ flex: 1 }}>
+              <div className="meeting-item-content" onClick={() => onSelectMeeting(meeting)}>
                 <div className="meeting-name">{meeting.name}</div>
                 <div className="meeting-date">{formatDate(meeting.created_at)}</div>
               </div>
               <button
+                className="delete-meeting-btn"
                 onClick={(e) => {
                   e.stopPropagation();
                   if (window.confirm(t('sidebar.delete_confirm', { name: meeting.name }))) {
                     onDeleteMeeting(meeting.id);
                   }
                 }}
-                style={{
-                  position: 'absolute',
-                  top: '8px',
-                  right: '8px',
-                  background: 'rgba(239, 65, 70, 0.1)',
-                  border: '1px solid rgba(239, 65, 70, 0.3)',
-                  color: '#ef4146',
-                  borderRadius: '6px',
-                  padding: '4px 8px',
-                  fontSize: '11px',
-                  cursor: 'pointer',
-                  opacity: 0,
-                  transition: 'opacity 0.2s',
-                }}
-                className="delete-meeting-btn"
+                title={t('sidebar.delete')}
               >
-                {t('sidebar.delete')}
+                <Trash2 size={14} />
               </button>
             </div>
           ))

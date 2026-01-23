@@ -56,16 +56,16 @@ Grant these permissions when prompted:
 - **Microphone access** - Required for all platforms
 - **Screen Recording** (macOS only) - Required for system audio capture
 
-**macOS Note:** System audio capture has limitations on unsigned builds. See [docs/SYSTEM_AUDIO.md](docs/SYSTEM_AUDIO.md) for details.
+**macOS Note:** System audio capture has limitations on unsigned builds. See [../docs/meetlens-electron-app/SYSTEM_AUDIO.md](../docs/meetlens-electron-app/SYSTEM_AUDIO.md) for details.
 
 ## Documentation
 
-- **[Getting Started](docs/GETTING_STARTED.md)** - Detailed setup and configuration guide
-- **[Architecture](docs/ARCHITECTURE.md)** - Technical documentation and system design
-- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
-- **[System Audio](docs/SYSTEM_AUDIO.md)** - macOS audio capture setup
-- **[Testing](docs/TESTING.md)** - Testing guide and commands
-- **[Design System](docs/DLS.md)** - UI/UX guidelines
+- **[Getting Started](../docs/meetlens-electron-app/GETTING_STARTED.md)** - Detailed setup and configuration guide
+- **[Architecture](../docs/meetlens-electron-app/ARCHITECTURE.md)** - Technical documentation and system design
+- **[Troubleshooting](../docs/meetlens-electron-app/TROUBLESHOOTING.md)** - Common issues and solutions
+- **[System Audio](../docs/meetlens-electron-app/SYSTEM_AUDIO.md)** - macOS audio capture setup
+- **[Testing](../docs/meetlens-electron-app/TESTING.md)** - Testing guide and commands
+- **[Design System](../docs/meetlens-electron-app/DLS.md)** - UI/UX guidelines
 - **[Changelog](CHANGELOG.md)** - Version history and release notes
 
 ## Supported Languages
@@ -81,7 +81,7 @@ Support for multiple languages including Turkish, English, Spanish, French, Germ
 - **better-sqlite3** - Local database
 - **Web Audio API** - Audio capture and mixing
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for complete technical details.
+See [../docs/meetlens-electron-app/ARCHITECTURE.md](../docs/meetlens-electron-app/ARCHITECTURE.md) for complete technical details.
 
 ## Development
 
@@ -104,18 +104,19 @@ meetlens-electron-app/
 │   ├── components/    # UI components
 │   ├── services/      # Business logic
 │   └── worklets/      # Audio processing
-├── docs/              # Documentation
 └── dist/              # Build output
 ```
 
-For detailed architecture information, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Documentation lives at `../docs/meetlens-electron-app/`.
+
+For detailed architecture information, see [../docs/meetlens-electron-app/ARCHITECTURE.md](../docs/meetlens-electron-app/ARCHITECTURE.md).
 
 ## Troubleshooting
 
 ### No Audio Captured
 - Check microphone permissions
 - Verify system audio source selection
-- See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
+- See [../docs/meetlens-electron-app/TROUBLESHOOTING.md](../docs/meetlens-electron-app/TROUBLESHOOTING.md)
 
 ### Transcription Not Working
 - Ensure backend services are reachable
@@ -128,10 +129,10 @@ For detailed architecture information, see [docs/ARCHITECTURE.md](docs/ARCHITECT
 ### Transcripts Not Persisting
 - Check browser console for error logs
 - Verify database integrity with `scripts/check-database.sh`
-- See [docs/troubleshooting/transcript-persistence-not-working.md](docs/troubleshooting/transcript-persistence-not-working.md)
-- Console log reference: [docs/troubleshooting/console-log-reference.md](docs/troubleshooting/console-log-reference.md)
+- See [../docs/meetlens-electron-app/troubleshooting/transcript-persistence-not-working.md](../docs/meetlens-electron-app/troubleshooting/transcript-persistence-not-working.md)
+- Console log reference: [../docs/meetlens-electron-app/troubleshooting/console-log-reference.md](../docs/meetlens-electron-app/troubleshooting/console-log-reference.md)
 
-For more help, see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
+For more help, see [../docs/meetlens-electron-app/TROUBLESHOOTING.md](../docs/meetlens-electron-app/TROUBLESHOOTING.md).
 
 ## Contributing
 

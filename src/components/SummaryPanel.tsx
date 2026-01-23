@@ -1,6 +1,7 @@
 import { SummaryResponse } from '../services/backendSummaryService';
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FileText, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 
 interface SummaryPanelProps {
   summary: string;
@@ -12,35 +13,51 @@ interface SummaryPanelProps {
 
 function SummaryPanel({ summary, structuredSummary, isGenerating, onGenerate, hasTranscripts }: SummaryPanelProps) {
   const { t } = useTranslation();
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const toggleCollapsed = () => {
+    setIsCollapsed((prev) => !prev);
+  };
 
   return (
-    <div className="right-panel" style={{ width: '380px' }}>
+    <div className={`right-panel ${isCollapsed ? 'right-panel--collapsed' : ''}`}>
       <div className="translation-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-          <h3 className="panel-title" style={{ fontSize: '15px', margin: 0, fontWeight: 600 }}>
-            {t('summary.title')}
-          </h3>
-          <button
-            className="record-button start"
-            onClick={onGenerate}
-            disabled={!hasTranscripts || isGenerating}
-            style={{
-              padding: '6px 14px',
-              fontSize: '12px',
-              opacity: !hasTranscripts || isGenerating ? 0.5 : 1,
-              cursor: !hasTranscripts || isGenerating ? 'not-allowed' : 'pointer',
-              borderRadius: '8px',
-            }}
-          >
-            {isGenerating ? t('summary.generating') : t('summary.generate')}
-          </button>
+        <div className="summary-header-row">
+          {!isCollapsed && (
+            <h3 className="panel-title summary-title">
+              {t('summary.title')}
+            </h3>
+          )}
+          <div className="summary-actions">
+            {!isCollapsed && (
+              <button
+                className="record-button start summary-generate"
+                onClick={onGenerate}
+                disabled={!hasTranscripts || isGenerating}
+              >
+                <Sparkles size={14} />
+                {isGenerating ? t('summary.generating') : t('summary.generate')}
+              </button>
+            )}
+            <button
+              className="summary-toggle"
+              onClick={toggleCollapsed}
+              aria-label={isCollapsed ? t('summary.expand') : t('summary.collapse')}
+              title={isCollapsed ? t('summary.expand') : t('summary.collapse')}
+            >
+              {isCollapsed ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+            </button>
+          </div>
         </div>
-        <p style={{ fontSize: '11px', color: '#8e8e8e', margin: 0 }}>
-          {t('summary.powered_by')}
-        </p>
+        {!isCollapsed && (
+          <p className="summary-powered">
+            {t('summary.powered_by')}
+          </p>
+        )}
       </div>
 
-      <div className="translation-container" style={{ padding: '16px' }}>
+      {!isCollapsed && (
+        <div className="translation-container">
         {isGenerating ? (
           <div className="empty-state">
             <div style={{
@@ -54,7 +71,7 @@ function SummaryPanel({ summary, structuredSummary, isGenerating, onGenerate, ha
             <div className="empty-text">{t('summary.generating')}</div>
           </div>
         ) : structuredSummary ? (
-          <div style={{ color: '#111', fontSize: '13px', lineHeight: '1.7' }}>
+          <div className="summary-content" style={{ color: '#111', fontSize: '13px', lineHeight: '1.7' }}>
             {/* Short Overview */}
             <div style={{
               marginBottom: '20px',
@@ -140,14 +157,12 @@ function SummaryPanel({ summary, structuredSummary, isGenerating, onGenerate, ha
           </div>
         ) : summary ? (
           // Fallback to plain text summary for backward compatibility
-          <div style={{ color: '#111111', fontSize: '13px', lineHeight: '1.7', whiteSpace: 'pre-wrap' }}>
+          <div className="summary-content" style={{ color: '#111111', fontSize: '13px', lineHeight: '1.7', whiteSpace: 'pre-wrap' }}>
             {summary}
           </div>
         ) : (
           <div className="empty-state">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" style={{ opacity: 0.3 }}>
-              <path d="M9 12h6M9 16h6M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
+            <FileText size={48} style={{ opacity: 0.3 }} />
             <div className="empty-text">
               {hasTranscripts
                 ? t('summary.empty_has_transcripts')
@@ -155,7 +170,8 @@ function SummaryPanel({ summary, structuredSummary, isGenerating, onGenerate, ha
             </div>
           </div>
         )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

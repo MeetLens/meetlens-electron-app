@@ -1,5 +1,6 @@
 import { Profiler, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Trash2 } from 'lucide-react';
 import SummaryPanel from './components/SummaryPanel';
 import TopBar from './components/TopBar';
 import Sidebar from './components/Sidebar';
@@ -125,7 +126,8 @@ function App() {
                 >
                   {isGeneratingSummary ? t('summary.generating') : t('summary.title')}
                 </button>
-                <button className="clear-button" onClick={handleClearTranscripts}>
+                <button className="clear-button" onClick={handleClearTranscripts} title={t('transcript.clear')}>
+                  <Trash2 size={16} />
                   {t('transcript.clear')}
                 </button>
               </div>

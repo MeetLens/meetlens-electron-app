@@ -37,6 +37,8 @@
     "title": "AI Summary",
     "generate": "Generate",
     "generating": "Generating...",
+    "collapse": "Collapse",
+    "expand": "Expand",
     "powered_by": "Powered by MeetLens AI",
     "overview": "Overview",
     "action_items": "Action Items",

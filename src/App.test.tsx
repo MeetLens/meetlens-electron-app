@@ -26,7 +26,7 @@ describe('App', () => {
     expect(await screen.findByText(/your spaces/i)).toBeInTheDocument();
     expect(screen.getByText(/no meetings yet/i)).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: '+' }));
+    await user.click(screen.getByRole('button', { name: /new meeting/i }));
 
     expect(createMeeting).toHaveBeenCalledTimes(1);
   });
