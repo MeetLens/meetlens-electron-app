@@ -34,7 +34,7 @@ export async function createDatabaseWorker(): Promise<DatabaseWorker> {
     const id = nextRequestId++;
 
     return new Promise<T>((resolve, reject) => {
-      pending.set(id, { resolve, reject });
+      pending.set(id, { resolve: resolve as (value: unknown) => void, reject });
       worker.postMessage({ id, type, payload });
     });
   };

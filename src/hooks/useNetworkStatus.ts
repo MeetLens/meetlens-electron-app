@@ -9,7 +9,7 @@ const checkBackendHealth = async (): Promise<boolean> => {
   const timeoutId = window.setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT_MS);
 
   try {
-    const response = await fetch(`${BACKEND_HTTP_BASE_URL}/health`, {
+    const response = await fetch(`${BACKEND_HTTP_BASE_URL}/`, {
       method: 'HEAD',
       signal: controller.signal,
     });
