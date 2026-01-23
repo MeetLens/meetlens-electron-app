@@ -59,49 +59,7 @@ vi.mock('electron', () => ({
   desktopCapturer: electronMocks.desktopCapturerMock,
 }));
 
-const sqliteMocks = vi.hoisted(() => {
-  const runMock = vi.fn();
-  const allMock = vi.fn();
-  const getMock = vi.fn();
-  const prepareMock = vi.fn(() => ({ run: runMock, all: allMock, get: getMock }));
-  const execMock = vi.fn();
-  const pragmaMock = vi.fn((pragma: string) => {
-    if (pragma === 'user_version') {
-      return 0;
-    }
-    return [];
-  });
-  const transactionMock = vi.fn((fn: (...args: any[]) => unknown) => {
-    return (...args: any[]) => fn(...args);
-  });
-  const closeMock = vi.fn();
-  const DatabaseMock = vi.fn(() => ({
-    exec: execMock,
-    prepare: prepareMock,
-    pragma: pragmaMock,
-    transaction: transactionMock,
-    close: closeMock,
-  }));
-
-  return {
-    runMock,
-    allMock,
-    getMock,
-    prepareMock,
-    execMock,
-    pragmaMock,
-    transactionMock,
-    closeMock,
-    DatabaseMock,
-  };
-});
-
-vi.mock('better-sqlite3', () => ({
-  __esModule: true,
-  default: sqliteMocks.DatabaseMock,
-}));
-
-import { createDatabase, createWindow, registerIpcHandlers } from './main';
+import { createWindow, registerIpcHandlers, type DatabaseWorker } from './main';
 
 describe('electron main process helpers', () => {
   beforeEach(() => {
@@ -144,7 +102,10 @@ describe('electron main process helpers', () => {
   });
 
   it('registers IPC handlers for meeting operations', () => {
-    const database = createDatabase();
+    const database: DatabaseWorker = {
+      request: vi.fn(),
+      close: vi.fn(),
+    };
 
     registerIpcHandlers(database);
 

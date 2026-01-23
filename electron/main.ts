@@ -8,11 +8,15 @@ import {
   type IpcMainInvokeEvent,
 } from 'electron';
 import path from 'path';
-import Database from 'better-sqlite3';
-import { runMigrations } from './migrations';
+import { Worker } from 'worker_threads';
 
 let mainWindow: BrowserWindow | null = null;
-let db: Database | undefined;
+let databaseWorker: DatabaseWorker | null = null;
+
+export type DatabaseWorker = {
+  request: <T = unknown>(type: string, payload?: Record<string, unknown>) => Promise<T>;
+  close: () => Promise<void>;
+};
 
 // CRITICAL: Enable macOS loopback audio for screen share
 // This flag allows getDisplayMedia() to capture system audio on macOS.
@@ -20,12 +24,59 @@ let db: Database | undefined;
 // Works in dev mode (Electron.app is signed) but requires app signing for production.
 app.commandLine.appendSwitch('enable-features', 'MacLoopbackAudioForScreenShare');
 
-export function createDatabase() {
+export async function createDatabaseWorker(): Promise<DatabaseWorker> {
   const dbPath = path.join(app.getPath('userData'), 'meetlens.db');
-  db = new Database(dbPath);
-  runMigrations(db);
+  const worker = new Worker(path.join(__dirname, 'database.worker.js'));
+  let nextRequestId = 0;
+  const pending = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void }>();
 
-  return db;
+  const request = <T = unknown>(type: string, payload?: Record<string, unknown>) => {
+    const id = nextRequestId++;
+
+    return new Promise<T>((resolve, reject) => {
+      pending.set(id, { resolve, reject });
+      worker.postMessage({ id, type, payload });
+    });
+  };
+
+  worker.on('message', (message: { id: number; ok: boolean; result?: unknown; error?: string }) => {
+    const entry = pending.get(message.id);
+    if (!entry) {
+      return;
+    }
+    pending.delete(message.id);
+    if (message.ok) {
+      entry.resolve(message.result);
+    } else {
+      entry.reject(new Error(message.error || 'Database worker error'));
+    }
+  });
+
+  worker.on('error', (error) => {
+    pending.forEach(({ reject }) => reject(error));
+    pending.clear();
+  });
+
+  worker.on('exit', (code) => {
+    if (code !== 0) {
+      const error = new Error(`Database worker stopped with exit code ${code}`);
+      pending.forEach(({ reject }) => reject(error));
+      pending.clear();
+    }
+  });
+
+  await request('init', { dbPath });
+
+  return {
+    request,
+    close: async () => {
+      try {
+        await request('close');
+      } finally {
+        await worker.terminate();
+      }
+    },
+  };
 }
 
 export function createWindow() {
@@ -108,7 +159,7 @@ function configureDisplayMediaHandling() {
   });
 }
 
-export function registerIpcHandlers(database: Database) {
+export function registerIpcHandlers(database: DatabaseWorker) {
   // Open System Settings for screen recording permission
   ipcMain.handle('open-screen-recording-settings', async () => {
     if (process.platform === 'darwin') {
@@ -175,22 +226,15 @@ export function registerIpcHandlers(database: Database) {
   });
 
   ipcMain.handle('create-meeting', async (_event: IpcMainInvokeEvent, name: string) => {
-    const now = new Date().toISOString();
-    const stmt = database.prepare(
-      'INSERT INTO meetings (name, created_at, updated_at) VALUES (?, ?, ?)'
-    );
-    const result = stmt.run(name, now, now);
-    return { id: result.lastInsertRowid, name, created_at: now, updated_at: now };
+    return database.request('create-meeting', { name });
   });
 
   ipcMain.handle('get-meetings', async () => {
-    const stmt = database.prepare('SELECT * FROM meetings ORDER BY created_at DESC');
-    return stmt.all();
+    return database.request('get-meetings');
   });
 
   ipcMain.handle('get-meeting', async (_event: IpcMainInvokeEvent, id: number) => {
-    const stmt = database.prepare('SELECT * FROM meetings WHERE id = ?');
-    return stmt.get(id);
+    return database.request('get-meeting', { id });
   });
 
   ipcMain.handle('save-transcript', async (
@@ -200,66 +244,24 @@ export function registerIpcHandlers(database: Database) {
     text: string,
     translation?: string,
   ) => {
-    console.log('[IPC/save-transcript] Received request:', {
+    return database.request('save-transcript', {
       meetingId,
       timestamp,
-      textLength: text.length,
-      hasTranslation: !!translation,
-      textPreview: text.substring(0, 50) + '...',
+      text,
+      translation,
     });
-
-    try {
-      // Fix Issue 3: Use INSERT OR REPLACE to handle translation updates without duplicates
-      // This ensures translation updates modify existing rows instead of creating duplicates
-      const stmt = database.prepare(`
-        INSERT INTO transcripts (meeting_id, timestamp, text, translation)
-        VALUES (?, ?, ?, ?)
-        ON CONFLICT(meeting_id, timestamp)
-        DO UPDATE SET
-          text = excluded.text,
-          translation = excluded.translation
-      `);
-      const result = stmt.run(meetingId, timestamp, text, translation || null);
-
-      console.log('[IPC/save-transcript] SQL executed successfully:', {
-        lastInsertRowid: result.lastInsertRowid,
-      });
-
-      const updateStmt = database.prepare('UPDATE meetings SET updated_at = ? WHERE id = ?');
-      updateStmt.run(new Date().toISOString(), meetingId);
-
-      console.log('[IPC/save-transcript] ✓ Transcript saved successfully');
-
-      return { id: result.lastInsertRowid };
-    } catch (error: any) {
-      console.error('[IPC/save-transcript] ✗ Database error:', {
-        error: error.message,
-        code: error.code,
-        stack: error.stack,
-      });
-      throw error;
-    }
   });
 
   ipcMain.handle('get-transcripts', async (_event: IpcMainInvokeEvent, meetingId: number) => {
-    const stmt = database.prepare('SELECT * FROM transcripts WHERE meeting_id = ? ORDER BY id ASC');
-    return stmt.all(meetingId);
+    return database.request('get-transcripts', { meetingId });
   });
 
   ipcMain.handle('clear-transcripts', async (_event: IpcMainInvokeEvent, meetingId: number) => {
-    const stmt = database.prepare('DELETE FROM transcripts WHERE meeting_id = ?');
-    stmt.run(meetingId);
-
-    const updateStmt = database.prepare('UPDATE meetings SET updated_at = ? WHERE id = ?');
-    updateStmt.run(new Date().toISOString(), meetingId);
-
-    return { success: true };
+    return database.request('clear-transcripts', { meetingId });
   });
 
   ipcMain.handle('delete-meeting', async (_event: IpcMainInvokeEvent, id: number) => {
-    const stmt = database.prepare('DELETE FROM meetings WHERE id = ?');
-    stmt.run(id);
-    return { success: true };
+    return database.request('delete-meeting', { id });
   });
 
   ipcMain.handle(
@@ -270,21 +272,22 @@ export function registerIpcHandlers(database: Database) {
       summary: string,
       fullTranscript: string,
     ) => {
-    const stmt = database.prepare('UPDATE meetings SET summary = ?, full_transcript = ?, updated_at = ? WHERE id = ?');
-    stmt.run(summary, fullTranscript, new Date().toISOString(), meetingId);
-    return { success: true };
-  });
+      return database.request('save-meeting-summary', {
+        meetingId,
+        summary,
+        fullTranscript,
+      });
+    },
+  );
 
   ipcMain.handle('get-meeting-summary', async (_event: IpcMainInvokeEvent, meetingId: number) => {
-    const stmt = database.prepare('SELECT summary, full_transcript FROM meetings WHERE id = ?');
-    const result = stmt.get(meetingId);
-    return result || { summary: null, full_transcript: null };
+    return database.request('get-meeting-summary', { meetingId });
   });
 }
 
-function bootstrap() {
-  const database = createDatabase();
-  registerIpcHandlers(database);
+async function bootstrap() {
+  databaseWorker = await createDatabaseWorker();
+  registerIpcHandlers(databaseWorker);
   configureDisplayMediaHandling();
   createWindow();
 
@@ -296,11 +299,16 @@ function bootstrap() {
 }
 
 if (process.env.NODE_ENV !== 'test') {
-  app.whenReady().then(bootstrap);
+  app.whenReady().then(() => {
+    void bootstrap();
+  });
 
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
-      db?.close();
+      if (databaseWorker) {
+        void databaseWorker.close();
+        databaseWorker = null;
+      }
       app.quit();
     }
   });
