@@ -27,6 +27,7 @@ interface UseTranscriptionResult {
   partialTranscript: string;
   partialTranslation: string;
   stableTranslation: string;
+  activeSessionId: string | null;
   isRecording: boolean;
   isConnected: boolean;
   handleStartStop: () => void;
@@ -659,20 +660,17 @@ function useTranscription({
 
   const processedTranscripts = useMemo(() => {
     return currentMeetingTranscripts.map((entry, index) => {
-      const isActiveSessionBubble =
-        isRecording && entry.sessionId === currentSessionIdRef.current;
-      const showTranslation =
-        Boolean(entry.translation) ||
-        (isActiveSessionBubble && Boolean(stableTranslation || partialTranslation));
-
       return {
         ...entry,
-        isActiveSessionBubble,
-        showTranslation,
         index,
       };
     });
-  }, [currentMeetingTranscripts, isRecording, partialTranslation, stableTranslation]);
+  }, [currentMeetingTranscripts]);
+
+  const activeSessionId = useMemo(
+    () => (isRecording ? currentSessionIdRef.current : null),
+    [isRecording]
+  );
 
   const clearTranscriptsForMeeting = useCallback((meetingId: number) => {
     setTranscriptsByMeeting((prev) => ({
@@ -696,6 +694,7 @@ function useTranscription({
     partialTranscript,
     partialTranslation,
     stableTranslation,
+    activeSessionId,
     isRecording,
     isConnected,
     handleStartStop,

@@ -35,6 +35,7 @@ function App() {
     partialTranscript,
     partialTranslation,
     stableTranslation,
+    activeSessionId,
     isRecording,
     isConnected,
     handleStartStop,
@@ -136,6 +137,7 @@ function App() {
             <TranscriptList
               transcripts={processedTranscripts}
               isRecording={isRecording}
+              activeSessionId={activeSessionId}
               partialTranscript={partialTranscript}
               partialTranslation={partialTranslation}
               stableTranslation={stableTranslation}

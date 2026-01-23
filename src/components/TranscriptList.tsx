@@ -6,6 +6,7 @@ import type { ProcessedTranscriptEntry } from '../types/transcript';
 interface TranscriptListProps {
   transcripts: ProcessedTranscriptEntry[];
   isRecording: boolean;
+  activeSessionId: string | null;
   partialTranscript: string;
   partialTranslation: string;
   stableTranslation: string;
@@ -14,6 +15,7 @@ interface TranscriptListProps {
 function TranscriptList({
   transcripts,
   isRecording,
+  activeSessionId,
   partialTranscript,
   partialTranslation,
   stableTranslation,
@@ -84,56 +86,66 @@ function TranscriptList({
         </div>
       ) : (
         <>
-          {transcripts.map((entry, index) => (
-            <div
-              key={entry.id}
-              className={`transcript-entry ${
-                index === transcripts.length - 1 ? 'transcript-entry--latest' : ''
-              }`}
-            >
-              <div className="transcript-timestamp">{entry.timestamp}</div>
+          {transcripts.map((entry, index) => {
+            const isActiveSessionBubble =
+              isRecording &&
+              Boolean(entry.sessionId) &&
+              entry.sessionId === activeSessionId;
+            const showTranslation =
+              Boolean(entry.translation) ||
+              (isActiveSessionBubble && Boolean(stableTranslation || partialTranslation));
+
+            return (
               <div
-                className={`transcript-columns ${
-                  entry.showTranslation ? '' : 'transcript-columns--single'
+                key={entry.id}
+                className={`transcript-entry ${
+                  index === transcripts.length - 1 ? 'transcript-entry--latest' : ''
                 }`}
               >
-                <div className="transcript-column transcript-column--source">
-                  <div className="transcript-text">
-                    {entry.text}
-                    {entry.isActiveSessionBubble && partialTranscript && (
-                      <span className="transcript-partial">
-                        {entry.text ? ' ' : ''}
-                        {partialTranscript}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {entry.showTranslation && (
-                  <div className="transcript-column transcript-column--translation">
-                    <div className="transcript-translation">
-                      {entry.isActiveSessionBubble ? (
-                        <>
-                          {(stableTranslation || (!partialTranslation && entry.translation)) && (
-                            <span className="translation-stable">
-                              {stableTranslation || entry.translation}
-                            </span>
-                          )}
-                          {partialTranslation && (
-                            <span className="translation-partial">
-                              {stableTranslation ? ' ' : ''}
-                              {partialTranslation}
-                            </span>
-                          )}
-                        </>
-                      ) : (
-                        entry.translation
+                <div className="transcript-timestamp">{entry.timestamp}</div>
+                <div
+                  className={`transcript-columns ${
+                    showTranslation ? '' : 'transcript-columns--single'
+                  }`}
+                >
+                  <div className="transcript-column transcript-column--source">
+                    <div className="transcript-text">
+                      {entry.text}
+                      {isActiveSessionBubble && partialTranscript && (
+                        <span className="transcript-partial">
+                          {entry.text ? ' ' : ''}
+                          {partialTranscript}
+                        </span>
                       )}
                     </div>
                   </div>
-                )}
+                  {showTranslation && (
+                    <div className="transcript-column transcript-column--translation">
+                      <div className="transcript-translation">
+                        {isActiveSessionBubble ? (
+                          <>
+                            {(stableTranslation || (!partialTranslation && entry.translation)) && (
+                              <span className="translation-stable">
+                                {stableTranslation || entry.translation}
+                              </span>
+                            )}
+                            {partialTranslation && (
+                              <span className="translation-partial">
+                                {stableTranslation ? ' ' : ''}
+                                {partialTranslation}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          entry.translation
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {isRecording && (
             <div className="transcript-recording-indicator">
               <div className="recording-dot recording-dot--small" />
