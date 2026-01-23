@@ -6,6 +6,8 @@ import { SUPPORTED_APP_LANGUAGES, TRANSLATION_LANGUAGES } from '../i18n/config';
 interface TopBarProps {
   isRecording: boolean;
   isConnected: boolean;
+  isOnline: boolean;
+  backendReachable: boolean | null;
   onStartStop: () => void;
   translationLanguage: string;
   onTranslationLanguageChange: (language: string) => void;
@@ -16,6 +18,8 @@ interface TopBarProps {
 function TopBar({
   isRecording,
   isConnected,
+  isOnline,
+  backendReachable,
   onStartStop,
   translationLanguage,
   onTranslationLanguageChange,
@@ -24,6 +28,41 @@ function TopBar({
 }: TopBarProps) {
   const { t, i18n } = useTranslation();
   const [showSettings, setShowSettings] = useState(false);
+
+  const connectionStatusLabel = () => {
+    if (!isOnline) {
+      return t('topbar.offline');
+    }
+
+    if (backendReachable === null) {
+      return t('topbar.checking');
+    }
+
+    if (!backendReachable) {
+      return t('topbar.backend_unavailable');
+    }
+
+    return isConnected ? t('topbar.connected') : t('topbar.disconnected');
+  };
+
+  const connectionStatusDot = () => {
+    if (!isOnline || backendReachable === false) {
+      return 'disconnected';
+    }
+
+    if (backendReachable === null) {
+      return 'checking';
+    }
+
+    return isConnected ? 'connected' : 'disconnected';
+  };
+
+  const isRecordingDisabled = !isOnline || backendReachable === false;
+  const recordingTooltip = !isOnline
+    ? t('topbar.offline_tooltip')
+    : backendReachable === false
+      ? t('topbar.backend_unavailable_tooltip')
+      : undefined;
 
   const handleSaveSettings = () => {
     setShowSettings(false);
@@ -45,6 +84,8 @@ function TopBar({
           <button
             className={`record-button ${isRecording ? 'stop' : 'start'}`}
             onClick={onStartStop}
+            disabled={isRecordingDisabled && !isRecording}
+            title={recordingTooltip}
           >
             {isRecording ? (
               <Square className="record-icon" size={16} fill="currentColor" />
@@ -57,8 +98,8 @@ function TopBar({
 
         <div className="top-bar-right">
           <div className="connection-status">
-            <div className={`status-dot ${isConnected ? 'connected' : 'disconnected'}`}></div>
-            <span>{isConnected ? t('topbar.connected') : t('topbar.disconnected')}</span>
+            <div className={`status-dot ${connectionStatusDot()}`}></div>
+            <span>{connectionStatusLabel()}</span>
           </div>
 
           <button
