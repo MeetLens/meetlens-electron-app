@@ -47,6 +47,10 @@ describe('useTranscription', () => {
     await waitFor(() => expect(fetchTranscripts).toHaveBeenCalledWith(1));
     await waitFor(() => expect(result.current.processedTranscripts).toHaveLength(1));
 
-    expect(result.current.processedTranscripts[0].showTranslation).toBe(true);
+    expect(result.current.processedTranscripts[0]).toMatchObject({
+      text: 'Hello world',
+      translation: 'Merhaba dunya',
+      index: 0,
+    });
   });
 });

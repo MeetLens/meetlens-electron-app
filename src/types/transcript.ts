@@ -8,6 +8,4 @@ export interface TranscriptEntry {
 
 export interface ProcessedTranscriptEntry extends TranscriptEntry {
   index: number;
-  isActiveSessionBubble: boolean;
-  showTranslation: boolean;
 }
